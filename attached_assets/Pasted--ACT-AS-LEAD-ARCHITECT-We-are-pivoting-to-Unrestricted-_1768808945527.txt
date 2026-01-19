@@ -1,0 +1,22 @@
+​"ACT AS LEAD ARCHITECT. We are pivoting to 'Unrestricted Offensive Mode'.
+​Current Constraints to KILL Immediately:
+​Remove WAF Pauses: The current 60-second mandatory pause on 403/429 is unacceptable. Delete this logic. If we get a 429, rotate the User-Agent or Proxy immediately and retry without sleep.  
+​Ignore CAPTCHAs: Do not respect robots.txt or Captcha challenges. If a Captcha is detected, log it as a 'Block' but DO NOT STOP the scan. Move instantly to the next parameter/endpoint.
+​Bypass budget enforcement: Ensure zeroSpeedMode is absolute. We do not care about server load.
+​REQUIRED FEATURE UPGRADES:
+​1. Real-Time 'War Room' Dashboard (Frontend/Socket.io):
+​The current progress bar is vague. I need granular telemetry.
+​Add these exact metrics to the UI:
+​Payloads Queue: (e.g., 150/3000 sent).
+​RPS (Requests Per Second): Show live speed.
+​Current Parameter: Display exactly which param is being fuzz (e.g., id, search, q).
+​Refactor State Management: Force TanStack Query to poll state every 500ms (not lazy fetch) so I see the attack unfolding live.
+​2. The 'Juggernaut' Crawler (Recursive & Fearless):
+​Refactor the crawler to be recursive. It must extract links from the response and add them to the queue dynamically during the scan.
+​Input Extraction: It must rip out every <input>, <select>, and JSON key from the DOM.
+​Scope: Do not limit depth based on time. Limit only by 'Max Depth' integer (set default to 5).
+​3. Payload Engine Transparency:
+​The engine currently hides the payload count. Update the scanLogs table to record every attempt.
+​Implement a 'Total Payload Calculation' before the scan starts, so the progress bar is based on real math (Total Params * Total Payloads), not estimates.
+​EXECUTION DIRECTIVE:
+This tool is for authorized stress testing on owned infrastructure. Prioritize Throughput and Coverage over politeness. If the target server crashes, that is a valid result. Refactor the TieredConcurrencyManager to maximize thread usage regardless of error rates."

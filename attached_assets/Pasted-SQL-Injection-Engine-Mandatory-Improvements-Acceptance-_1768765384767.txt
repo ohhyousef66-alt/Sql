@@ -1,0 +1,85 @@
+SQL Injection Engine – Mandatory Improvements & Acceptance Criteria
+
+1. Problem Statement
+The scanner fails to detect SQL injection on http://testphp.vulnweb.com/.
+This target is intentionally vulnerable and widely used to validate SQL injection engines.
+Failure to detect SQL injection here indicates a fundamental flaw in the SQL engine itself.
+The scanner must be considered incomplete until this issue is resolved.
+
+2. Remove Invalid Detection Logic
+Remove any SQL detection logic based on:
+- Error string matching alone
+- HTTP status codes alone
+- Single-request conclusions
+- Raw response text comparison
+SQL injection detection must be behavior-based, not payload-based.
+
+3. Boolean-Based SQL Injection (Primary Detection Method)
+Implement strict boolean logic testing:
+- Establish a clean baseline response (normalized structure, length, key DOM blocks).
+- Execute paired true and false conditions.
+- Compare structural differences such as element count, missing blocks, or layout changes.
+Acceptance conditions:
+- Differences must be repeatable.
+- Differences must remain consistent across retries.
+- Single or random anomalies must be ignored.
+No SQL injection finding is valid without boolean differential evidence.
+
+4. Response Normalization (Critical Requirement)
+Before any comparison:
+- Strip dynamic content such as timestamps, random IDs, ads, and session tokens.
+- Normalize HTML structure and whitespace.
+- Compare structure and behavior, not raw text.
+Improper normalization is the most likely cause of current detection failures.
+
+5. Time-Based SQL Injection (Secondary Confirmation)
+Time-based detection must follow statistical rules:
+- Build a latency baseline using at least 5 to 7 clean requests.
+- Use incremental delays (e.g., 2s, then 4s).
+- Measure variance rather than absolute delay.
+- Require repeatable timing deviation.
+A single slow response must never be treated as evidence.
+
+6. Parameter Targeting
+Do not scan blindly.
+On testphp.vulnweb.com, prioritize known SQL-sensitive parameters:
+- cat
+- artist
+- id
+Classify parameters before testing:
+- numeric vs string
+- identifier vs search input
+Do not apply identical payload logic to all parameters.
+
+7. Speed Without Quality Loss
+Speed improvements must come from logic, not shortcuts:
+- Immediately discard parameters with no behavioral signal.
+- Cache negative results.
+- Escalate testing depth only when indicators appear.
+- Avoid re-testing payload classes that already failed.
+Do not reduce payload diversity, verification depth, or confirmation retries.
+
+8. Mandatory Improvement Loop
+After each modification to the SQL engine:
+1. Re-scan http://testphp.vulnweb.com/
+2. If SQL injection is not detected:
+   - Assume the engine logic is flawed.
+   - Refine detection logic.
+   - Re-test.
+Do not attribute failure to the target.
+
+9. Acceptance Criteria
+The scanner is considered functional only when it:
+- Detects SQL injection on testphp.vulnweb.com
+- Uses boolean or time-based behavioral evidence
+- Produces repeatable and explainable proof
+- Does not rely on CVEs or error guessing
+
+10. Final Note
+If SQL injection is detected quickly, that is correct behavior.
+If it is not detected, the engine is incorrect.
+There is no intermediate state.
+
+Summary:
+This tool does not need more payloads, more CVEs, or more generic features.
+It needs correct SQL logic.

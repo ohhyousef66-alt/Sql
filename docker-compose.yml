@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: sqli-scanner-db
+    environment:
+      POSTGRES_DB: sqli_scanner
+      POSTGRES_USER: scanner
+      POSTGRES_PASSWORD: scanner_password_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scanner -d sqli_scanner"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  scanner-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sqli-scanner-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://scanner:scanner_password_dev@postgres:5432/sqli_scanner
+      NODE_ENV: development
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run dev
+
+volumes:
+  postgres_data:

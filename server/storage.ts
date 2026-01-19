@@ -1,0 +1,442 @@
+import { db } from "./db";
+import {
+  scans,
+  vulnerabilities,
+  scanLogs,
+  trafficLogs,
+  uploadedFiles,
+  stagedTargets,
+  stageRuns,
+  type Scan,
+  type InsertScan,
+  type Vulnerability,
+  type InsertVulnerability,
+  type ScanLog,
+  type InsertScanLog,
+  type TrafficLog,
+  type InsertTrafficLog,
+  type UploadedFile,
+  type InsertUploadedFile,
+  type StagedTarget,
+  type InsertStagedTarget,
+  type StageRun,
+  type InsertStageRun,
+} from "@shared/schema";
+import { eq, desc, and, lt, or, isNull } from "drizzle-orm";
+
+export interface IStorage {
+  // Scans
+  getScans(): Promise<Scan[]>;
+  getScan(id: number): Promise<Scan | undefined>;
+  createScan(scan: InsertScan): Promise<Scan>;
+  createBatchParentScan(targetUrls: string[], scanMode: string): Promise<Scan>;
+  createChildScan(parentScanId: number, targetUrl: string, scanMode: string): Promise<Scan>;
+  getChildScans(parentScanId: number): Promise<Scan[]>;
+  updateParentScanFromChildren(parentScanId: number): Promise<Scan>;
+  updateScanStatus(id: number, status: string, progress?: number, summary?: any): Promise<Scan>;
+  updateScan(id: number, updates: {
+    status?: string;
+    progress?: number;
+    summary?: any;
+    crawlStats?: any;
+    techStack?: any;
+    progressMetrics?: any;
+    endTime?: Date;
+    completionReason?: string;
+  }): Promise<Scan>;
+  
+  // Vulnerabilities
+  getVulnerabilities(scanId: number): Promise<Vulnerability[]>;
+  createVulnerability(vuln: InsertVulnerability): Promise<Vulnerability>;
+  
+  // Logs
+  getScanLogs(scanId: number): Promise<ScanLog[]>;
+  createScanLog(log: InsertScanLog): Promise<ScanLog>;
+  
+  // Traffic Logs
+  getTrafficLogs(scanId: number, limit?: number): Promise<TrafficLog[]>;
+  createTrafficLog(log: InsertTrafficLog): Promise<TrafficLog>;
+  
+  cancelScan(id: number): Promise<Scan>;
+  
+  // Uploaded Files (Mass-Scan Management)
+  createUploadedFile(data: InsertUploadedFile): Promise<UploadedFile>;
+  getUploadedFile(id: number): Promise<UploadedFile | undefined>;
+  getUploadedFiles(): Promise<UploadedFile[]>;
+  updateUploadedFile(id: number, data: Partial<UploadedFile>): Promise<UploadedFile>;
+  deleteUploadedFile(id: number): Promise<void>;
+  
+  // Staged Targets (Mass-Scan Management)
+  createStagedTarget(data: InsertStagedTarget): Promise<StagedTarget>;
+  createStagedTargets(data: InsertStagedTarget[]): Promise<StagedTarget[]>;
+  getStagedTargetsByFile(fileId: number): Promise<StagedTarget[]>;
+  getStagedTargetsByFileAndStage(fileId: number, stage: number): Promise<StagedTarget[]>;
+  getFlaggedTargets(fileId?: number): Promise<StagedTarget[]>;
+  updateStagedTarget(id: number, data: Partial<StagedTarget>): Promise<StagedTarget>;
+  
+  // Stage Runs (Mass-Scan Management)
+  createStageRun(data: InsertStageRun): Promise<StageRun>;
+  getStageRun(id: number): Promise<StageRun | undefined>;
+  getStageRunsByFile(fileId: number): Promise<StageRun[]>;
+  updateStageRun(id: number, data: Partial<StageRun>): Promise<StageRun>;
+}
+
+export class DatabaseStorage implements IStorage {
+  async getScans(): Promise<Scan[]> {
+    return await db.select().from(scans).orderBy(desc(scans.startTime));
+  }
+
+  async getScan(id: number): Promise<Scan | undefined> {
+    const [scan] = await db.select().from(scans).where(eq(scans.id, id));
+    return scan;
+  }
+
+  async createScan(insertScan: InsertScan): Promise<Scan> {
+    const [scan] = await db.insert(scans).values(insertScan).returning();
+    return scan;
+  }
+
+  async createBatchParentScan(targetUrls: string[], scanMode: string): Promise<Scan> {
+    const [parentScan] = await db.insert(scans).values({
+      targetUrl: `Batch scan: ${targetUrls.length} targets`,
+      scanMode,
+      status: "batch_parent",
+      isParent: true,
+      progress: 0,
+    }).returning();
+    return parentScan;
+  }
+
+  async createChildScan(parentScanId: number, targetUrl: string, scanMode: string): Promise<Scan> {
+    const [childScan] = await db.insert(scans).values({
+      targetUrl,
+      scanMode,
+      status: "pending",
+      parentScanId,
+      isParent: false,
+      progress: 0,
+    }).returning();
+    return childScan;
+  }
+
+  async getChildScans(parentScanId: number): Promise<Scan[]> {
+    return await db
+      .select()
+      .from(scans)
+      .where(eq(scans.parentScanId, parentScanId))
+      .orderBy(scans.id);
+  }
+
+  async updateParentScanFromChildren(parentScanId: number): Promise<Scan> {
+    const children = await this.getChildScans(parentScanId);
+    
+    if (children.length === 0) {
+      const [updated] = await db
+        .update(scans)
+        .set({ status: "completed", progress: 100, endTime: new Date() })
+        .where(eq(scans.id, parentScanId))
+        .returning();
+      return updated;
+    }
+
+    const completedCount = children.filter(c => 
+      c.status === "completed" || c.status === "failed" || c.status === "cancelled"
+    ).length;
+    
+    const allDone = completedCount === children.length;
+    const progress = Math.round((completedCount / children.length) * 100);
+    
+    const aggregatedSummary = {
+      critical: 0,
+      high: 0,
+      medium: 0,
+      low: 0,
+      info: 0,
+      confirmed: 0,
+      potential: 0,
+      childScans: children.length,
+      completedScans: completedCount,
+    };
+
+    for (const child of children) {
+      const summary = child.summary as Record<string, number> | null;
+      if (summary) {
+        aggregatedSummary.critical += summary.critical || 0;
+        aggregatedSummary.high += summary.high || 0;
+        aggregatedSummary.medium += summary.medium || 0;
+        aggregatedSummary.low += summary.low || 0;
+        aggregatedSummary.info += summary.info || 0;
+        aggregatedSummary.confirmed += summary.confirmed || 0;
+        aggregatedSummary.potential += summary.potential || 0;
+      }
+    }
+
+    const updates: any = {
+      progress,
+      summary: aggregatedSummary,
+    };
+    
+    if (allDone) {
+      updates.status = "completed";
+      updates.endTime = new Date();
+    } else if (children.some(c => c.status === "scanning")) {
+      updates.status = "scanning";
+    }
+
+    const [updated] = await db
+      .update(scans)
+      .set(updates)
+      .where(eq(scans.id, parentScanId))
+      .returning();
+    return updated;
+  }
+
+  async updateScanStatus(id: number, status: string, progress?: number, summary?: any): Promise<Scan> {
+    const updates: any = { status };
+    if (progress !== undefined) updates.progress = progress;
+    if (summary !== undefined) updates.summary = summary;
+    if (status === "completed" || status === "failed") updates.endTime = new Date();
+
+    const [updated] = await db
+      .update(scans)
+      .set(updates)
+      .where(eq(scans.id, id))
+      .returning();
+    return updated;
+  }
+
+  async updateScan(
+    id: number,
+    updates: {
+      status?: string;
+      progress?: number;
+      summary?: any;
+      crawlStats?: any;
+      techStack?: any;
+      progressMetrics?: any;
+      endTime?: Date;
+      completionReason?: string;
+    }
+  ): Promise<Scan> {
+    const updateData: any = {};
+    
+    if (updates.status !== undefined) updateData.status = updates.status;
+    if (updates.progress !== undefined) updateData.progress = updates.progress;
+    if (updates.summary !== undefined) updateData.summary = updates.summary;
+    if (updates.crawlStats !== undefined) updateData.crawlStats = updates.crawlStats;
+    if (updates.techStack !== undefined) updateData.techStack = updates.techStack;
+    if (updates.progressMetrics !== undefined) updateData.progressMetrics = updates.progressMetrics;
+    if (updates.endTime !== undefined) updateData.endTime = updates.endTime;
+    if (updates.completionReason !== undefined) updateData.completionReason = updates.completionReason;
+
+    const [updated] = await db
+      .update(scans)
+      .set(updateData)
+      .where(eq(scans.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getVulnerabilities(scanId: number): Promise<Vulnerability[]> {
+    return await db
+      .select()
+      .from(vulnerabilities)
+      .where(eq(vulnerabilities.scanId, scanId));
+  }
+
+  async createVulnerability(vuln: InsertVulnerability): Promise<Vulnerability> {
+    const [newVuln] = await db.insert(vulnerabilities).values(vuln).returning();
+    return newVuln;
+  }
+
+  async getScanLogs(scanId: number): Promise<ScanLog[]> {
+    return await db
+      .select()
+      .from(scanLogs)
+      .where(eq(scanLogs.scanId, scanId))
+      .orderBy(desc(scanLogs.timestamp));
+  }
+
+  async createScanLog(log: InsertScanLog): Promise<ScanLog> {
+    const [newLog] = await db.insert(scanLogs).values(log).returning();
+    return newLog;
+  }
+
+  async getTrafficLogs(scanId: number, limit: number = 1000): Promise<TrafficLog[]> {
+    return await db
+      .select()
+      .from(trafficLogs)
+      .where(eq(trafficLogs.scanId, scanId))
+      .orderBy(desc(trafficLogs.timestamp))
+      .limit(limit);
+  }
+
+  async createTrafficLog(log: InsertTrafficLog): Promise<TrafficLog> {
+    const [newLog] = await db.insert(trafficLogs).values(log).returning();
+    return newLog;
+  }
+
+  async cancelScan(id: number): Promise<Scan> {
+    const [updated] = await db
+      .update(scans)
+      .set({ status: "cancelled", endTime: new Date(), completionReason: "Cancelled by user" })
+      .where(eq(scans.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteScan(id: number): Promise<void> {
+    await db.delete(vulnerabilities).where(eq(vulnerabilities.scanId, id));
+    await db.delete(scanLogs).where(eq(scanLogs.scanId, id));
+    await db.delete(trafficLogs).where(eq(trafficLogs.scanId, id));
+    await db.delete(scans).where(eq(scans.id, id));
+  }
+
+  // Uploaded Files (Mass-Scan Management)
+  async createUploadedFile(data: InsertUploadedFile): Promise<UploadedFile> {
+    const [file] = await db.insert(uploadedFiles).values(data).returning();
+    return file;
+  }
+
+  async getUploadedFile(id: number): Promise<UploadedFile | undefined> {
+    const [file] = await db.select().from(uploadedFiles).where(eq(uploadedFiles.id, id));
+    return file;
+  }
+
+  async getUploadedFiles(): Promise<UploadedFile[]> {
+    return await db.select().from(uploadedFiles).orderBy(desc(uploadedFiles.uploadedAt));
+  }
+
+  async updateUploadedFile(id: number, data: Partial<UploadedFile>): Promise<UploadedFile> {
+    const [updated] = await db
+      .update(uploadedFiles)
+      .set(data)
+      .where(eq(uploadedFiles.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteUploadedFile(id: number): Promise<void> {
+    await db.delete(stagedTargets).where(eq(stagedTargets.fileId, id));
+    await db.delete(stageRuns).where(eq(stageRuns.fileId, id));
+    await db.delete(uploadedFiles).where(eq(uploadedFiles.id, id));
+  }
+
+  // Staged Targets (Mass-Scan Management)
+  async createStagedTarget(data: InsertStagedTarget): Promise<StagedTarget> {
+    const [target] = await db.insert(stagedTargets).values(data as any).returning();
+    return target;
+  }
+
+  async createStagedTargets(data: InsertStagedTarget[]): Promise<StagedTarget[]> {
+    if (data.length === 0) return [];
+    const targets = await db.insert(stagedTargets).values(data as any).returning();
+    return targets;
+  }
+
+  async getStagedTargetsByFile(fileId: number): Promise<StagedTarget[]> {
+    return await db
+      .select()
+      .from(stagedTargets)
+      .where(eq(stagedTargets.fileId, fileId))
+      .orderBy(stagedTargets.id);
+  }
+
+  async getStagedTargetsByFileAndStage(fileId: number, stage: number): Promise<StagedTarget[]> {
+    return await db
+      .select()
+      .from(stagedTargets)
+      .where(and(eq(stagedTargets.fileId, fileId), eq(stagedTargets.currentStage, stage)))
+      .orderBy(stagedTargets.id);
+  }
+
+  async getFlaggedTargets(fileId?: number): Promise<StagedTarget[]> {
+    if (fileId !== undefined) {
+      return await db
+        .select()
+        .from(stagedTargets)
+        .where(and(eq(stagedTargets.fileId, fileId), eq(stagedTargets.isAnomaly, true)))
+        .orderBy(stagedTargets.id);
+    }
+    return await db
+      .select()
+      .from(stagedTargets)
+      .where(eq(stagedTargets.isAnomaly, true))
+      .orderBy(stagedTargets.id);
+  }
+
+  async updateStagedTarget(id: number, data: Partial<StagedTarget>): Promise<StagedTarget> {
+    const updateData = { ...data, updatedAt: new Date() } as any;
+    const [updated] = await db
+      .update(stagedTargets)
+      .set(updateData)
+      .where(eq(stagedTargets.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Stage Runs (Mass-Scan Management)
+  async createStageRun(data: InsertStageRun): Promise<StageRun> {
+    const [run] = await db.insert(stageRuns).values(data).returning();
+    return run;
+  }
+
+  async getStageRun(id: number): Promise<StageRun | undefined> {
+    const [run] = await db.select().from(stageRuns).where(eq(stageRuns.id, id));
+    return run;
+  }
+
+  async getStageRunsByFile(fileId: number): Promise<StageRun[]> {
+    return await db
+      .select()
+      .from(stageRuns)
+      .where(eq(stageRuns.fileId, fileId))
+      .orderBy(stageRuns.stageNumber);
+  }
+
+  async updateStageRun(id: number, data: Partial<StageRun>): Promise<StageRun> {
+    const [updated] = await db
+      .update(stageRuns)
+      .set(data)
+      .where(eq(stageRuns.id, id))
+      .returning();
+    return updated;
+  }
+
+  async cleanupOrphanedScans(): Promise<number> {
+    // Increased from 10 minutes to 2 hours to accommodate slow/complex scans
+    const staleThreshold = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    
+    const result = await db
+      .update(scans)
+      .set({ 
+        status: "failed", 
+        endTime: new Date(),
+        completionReason: "Error: Orphaned scan - stale for over 10 minutes",
+        summary: { 
+          confirmed: 0, 
+          potential: 0, 
+          info: 0,
+          critical: 0,
+          high: 0,
+          medium: 0,
+          low: 0
+        }
+      })
+      .where(
+        and(
+          or(
+            eq(scans.status, "scanning"),
+            eq(scans.status, "in_progress"),
+            eq(scans.status, "pending")
+          ),
+          lt(scans.startTime, staleThreshold)
+        )
+      )
+      .returning();
+    
+    return result.length;
+  }
+}
+
+export const storage = new DatabaseStorage();

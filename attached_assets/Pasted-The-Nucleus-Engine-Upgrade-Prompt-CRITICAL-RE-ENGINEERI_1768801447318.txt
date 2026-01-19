@@ -1,0 +1,24 @@
+The "Nucleus" Engine Upgrade Prompt
+"CRITICAL RE-ENGINEERING: Transition from Speed-Oriented to Depth-Oriented SQLi Engine (sqlmap Parity).
+1. The 'Zero-Speed' Directive:
+Abolish all speed-based optimizations. A scan is only complete when the Work Queue is empty, not when a timer expires.
+If a scan on a domain like 'Hackazon' finishes in under 10 minutes, trigger an internal 'Low Confidence' alert and re-scan with higher depth.  
+2. Advanced Crawling & Entry Point Discovery (The Playwright Spider):
+Implement a Recursive Crawler that renders every page using Playwright.
+Capture Hidden Inputs, XHR/Fetch requests, and Fragment identifiers.
+Every URL found must be decomposed into its constituent parameters (GET, POST, JSON, Headers like User-Agent and Referer).
+3. SQLMap-Style Payload Logic (Tamping & Encoding):
+Implement Tamping Scripts: For every payload, apply random mutations (e.g., AND 1=1 becomes AND 5=5 or AND 0x31=0x31).
+Use Multi-Encoding: Automatically wrap payloads in Base64, Hex, URL-double, and Null-byte termination to bypass basic filters.
+Include Second-Order SQLi logic: Store a payload in one page (e.g., Profile Update) and check if it triggers on another page (e.g., Order History).
+4. WAF/IPS Bypass & Anti-Blocking Suite:
+Heuristic WAF Detection: Before scanning, send 'Safe Probes' to fingerprint the WAF (Cloudflare, AWS, etc.).
+Adaptive Rate Limiting: If an HTTP 403 or 429 is received, the engine must automatically pause for 60 seconds and then resume with a randomized Inter-request Delay (Jitter).
+Header Rotation: Rotate User-Agent, X-Forwarded-For, and Accept-Language on every request.
+5. Precision Response Analysis (Differential Testing):
+Dynamic Noise Filtering: Before comparing responses, the engine must 'clean' the HTML by stripping CSRF tokens, timestamps, and session-specific IDs.  
+Statistical Timing: For Time-based SQLi, use at least 5 baseline requests to calculate the 'Standard Deviation'. Only report a vulnerability if the delay is > 3\sigma (3 times the standard deviation).
+6. High-Fidelity Logging:
+I need to see a 'Traffic Log' in the UI showing exactly what payload was sent and what response was received.
+Refactor the current 14,000 lines to prioritize these modules. Quality is the only metric for success."
+Do not fucking test with testphp don't fucking do not fucking do that test

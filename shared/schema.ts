@@ -1,0 +1,269 @@
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+
+export const scanModes = ["sqli"] as const;
+export type ScanMode = typeof scanModes[number];
+
+export const verificationStatuses = ["confirmed", "potential", "not_applicable"] as const;
+export type VerificationStatus = typeof verificationStatuses[number];
+
+export const scanPhases = [
+  "initialization",
+  "crawling",
+  "parameter_discovery",
+  "baseline_profiling",
+  "error_based_sql",
+  "boolean_based_sql", 
+  "time_based_sql",
+  "union_based_sql",
+  "second_order_sql",
+  "final_verification",
+  "completed"
+] as const;
+export type ScanPhase = typeof scanPhases[number];
+
+export const scans = pgTable("scans", {
+  id: serial("id").primaryKey(),
+  targetUrl: text("target_url").notNull(),
+  scanMode: text("scan_mode").notNull().default("sqli"), // sqli only
+  threads: integer("threads").notNull().default(10), // concurrent threads 1-50
+  status: text("status").notNull().default("pending"), // pending, scanning, completed, failed, batch_parent
+  progress: integer("progress").default(0),
+  startTime: timestamp("start_time").defaultNow(),
+  endTime: timestamp("end_time"),
+  parentScanId: integer("parent_scan_id"),
+  isParent: boolean("is_parent").default(false),
+  completionReason: text("completion_reason"), // Why the scan ended: completed, cancelled, timeout, blocked, error
+  progressMetrics: jsonb("progress_metrics").$type<{
+    currentPhase: ScanPhase;
+    phaseDescription: string;
+    payloadsDiscovered: number;
+    payloadsTested: number;
+    payloadsRemaining: number;
+    parametersDiscovered: number;
+    parametersTested: number;
+    urlsDiscovered: number;
+    urlsTested: number;
+    lastActivity: string;
+    // War Room Metrics
+    currentParameter?: string;
+    currentUrl?: string;
+    rps?: number;
+    totalPayloadsInQueue?: number;
+    payloadsSent?: number;
+    blocksEncountered?: number;
+    startTimestamp?: number;
+    // Live Payload View (Elite Status)
+    currentPayload?: string;
+    currentPayloadType?: string;
+    currentConfidence?: number;
+    detectedDbType?: string;
+    detectedContext?: string;
+    // Adaptive Testing Metrics
+    adaptiveConcurrency?: number;
+    successRate?: number;
+    parametersSkipped?: number;
+    coveragePerHour?: number;
+    workQueueSize?: number;
+  }>(),
+  crawlStats: jsonb("crawl_stats").$type<{
+    urlsDiscovered: number;
+    formsFound: number;
+    parametersFound: number;
+    apiEndpoints: number;
+  }>(),
+  techStack: jsonb("tech_stack").$type<{
+    server?: string;
+    language?: string;
+    framework?: string;
+    cms?: string;
+  }>(),
+  summary: jsonb("summary").$type<{
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+    info: number;
+    confirmed: number;
+    potential: number;
+    attackChains?: number;
+  }>(),
+  attackChains: jsonb("attack_chains").$type<Array<{
+    id: string;
+    name: string;
+    description: string;
+    overallSeverity: "Critical" | "High" | "Medium";
+    exploitability: "Easy" | "Moderate" | "Complex";
+    impact: string;
+    attackFlow: string;
+    links: Array<{
+      vulnId: number;
+      vulnType: string;
+      severity: string;
+      description: string;
+      order: number;
+    }>;
+  }>>(),
+});
+
+export const vulnerabilities = pgTable("vulnerabilities", {
+  id: serial("id").primaryKey(),
+  scanId: integer("scan_id").references(() => scans.id).notNull(),
+  type: text("type").notNull(), // SQLi, XSS, etc.
+  severity: text("severity").notNull(), // Critical, High, Medium, Low, Info
+  verificationStatus: text("verification_status").notNull().default("potential"), // confirmed, potential, not_applicable
+  confidence: integer("confidence").default(50), // 0-100 confidence score
+  url: text("url").notNull(),
+  path: text("path"),
+  parameter: text("parameter"),
+  payload: text("payload"),
+  evidence: text("evidence"), // Response snippet or proof
+  verificationDetails: text("verification_details"), // Explains WHY the finding is confirmed/potential
+  description: text("description"),
+  remediation: text("remediation"),
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
+export const scanLogs = pgTable("scan_logs", {
+  id: serial("id").primaryKey(),
+  scanId: integer("scan_id").references(() => scans.id).notNull(),
+  level: text("level").notNull(), // info, warn, error, success
+  message: text("message").notNull(),
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
+export const trafficLogs = pgTable("traffic_logs", {
+  id: serial("id").primaryKey(),
+  scanId: integer("scan_id").references(() => scans.id).notNull(),
+  requestUrl: text("request_url").notNull(),
+  requestMethod: text("request_method").notNull().default("GET"),
+  requestHeaders: jsonb("request_headers").$type<Record<string, string>>(),
+  requestPayload: text("request_payload"),
+  parameterName: text("parameter_name"),
+  payloadType: text("payload_type"),
+  encodingUsed: text("encoding_used"),
+  responseStatus: integer("response_status"),
+  responseTime: integer("response_time"),
+  responseSize: integer("response_size"),
+  responseSnippet: text("response_snippet"),
+  detectionResult: text("detection_result"),
+  confidenceScore: integer("confidence_score"),
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
+// Mass-Scan Management: Pipeline Stages
+export const pipelineStages = [1, 2, 3, 4, 5] as const;
+export type PipelineStage = typeof pipelineStages[number];
+export const stageNames = {
+  1: "Discovery",
+  2: "Heuristic Probing", 
+  3: "Boolean/Error Context",
+  4: "Deep Fuzzing",
+  5: "Confirmation"
+} as const;
+
+// Mass-Scan Management: Uploaded target files
+export const uploadedFiles = pgTable("uploaded_files", {
+  id: serial("id").primaryKey(),
+  filename: text("filename").notNull(),
+  totalUrls: integer("total_urls").notNull().default(0),
+  validUrls: integer("valid_urls").notNull().default(0),
+  invalidUrls: integer("invalid_urls").notNull().default(0),
+  currentStage: integer("current_stage").notNull().default(0), // 0 = not started
+  status: text("status").notNull().default("pending"), // pending, processing, completed, failed
+  uploadedAt: timestamp("uploaded_at").defaultNow(),
+  processedAt: timestamp("processed_at"),
+});
+
+// Mass-Scan Management: Staged targets from uploaded files
+export const stagedTargets = pgTable("staged_targets", {
+  id: serial("id").primaryKey(),
+  fileId: integer("file_id").references(() => uploadedFiles.id).notNull(),
+  url: text("url").notNull(),
+  currentStage: integer("current_stage").notNull().default(0), // 0 = pending, 1-5 = completed stage
+  status: text("status").notNull().default("pending"), // pending, processing, completed, flagged, skipped
+  isAnomaly: boolean("is_anomaly").default(false), // Flagged during Stage 2/3
+  anomalyReason: text("anomaly_reason"), // Why it was flagged
+  scanId: integer("scan_id"), // Link to scan if created
+  deviationDetails: jsonb("deviation_details").$type<{
+    responseTimeDeviation?: number;
+    statusCodeChanged?: boolean;
+    sizeDeviation?: number;
+    domStructureChanged?: boolean;
+    errorPatternsFound?: string[];
+  }>(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Mass-Scan Management: Stage execution runs
+export const stageRuns = pgTable("stage_runs", {
+  id: serial("id").primaryKey(),
+  fileId: integer("file_id").references(() => uploadedFiles.id).notNull(),
+  stageNumber: integer("stage_number").notNull(), // 1-5
+  status: text("status").notNull().default("pending"), // pending, running, completed, failed, stopped
+  totalTargets: integer("total_targets").notNull().default(0),
+  processedTargets: integer("processed_targets").notNull().default(0),
+  flaggedTargets: integer("flagged_targets").notNull().default(0),
+  confirmedVulns: integer("confirmed_vulns").notNull().default(0),
+  threads: integer("threads").notNull().default(10),
+  zeroSpeedMode: boolean("zero_speed_mode").default(false), // Enabled for stages 4-5
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertScanSchema = createInsertSchema(scans).pick({
+  targetUrl: true,
+  scanMode: true,
+  threads: true,
+});
+
+export const insertVulnerabilitySchema = createInsertSchema(vulnerabilities).omit({
+  id: true,
+  timestamp: true,
+});
+
+export const insertScanLogSchema = createInsertSchema(scanLogs).omit({
+  id: true,
+  timestamp: true,
+});
+
+export const insertTrafficLogSchema = createInsertSchema(trafficLogs).omit({
+  id: true,
+  timestamp: true,
+});
+
+// Mass-Scan Management insert schemas
+export const insertUploadedFileSchema = createInsertSchema(uploadedFiles).omit({
+  id: true,
+  uploadedAt: true,
+  processedAt: true,
+});
+
+export const insertStagedTargetSchema = createInsertSchema(stagedTargets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertStageRunSchema = createInsertSchema(stageRuns).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type Scan = typeof scans.$inferSelect;
+export type InsertScan = z.infer<typeof insertScanSchema>;
+export type Vulnerability = typeof vulnerabilities.$inferSelect;
+export type InsertVulnerability = z.infer<typeof insertVulnerabilitySchema>;
+export type ScanLog = typeof scanLogs.$inferSelect;
+export type InsertScanLog = z.infer<typeof insertScanLogSchema>;
+export type TrafficLog = typeof trafficLogs.$inferSelect;
+export type InsertTrafficLog = z.infer<typeof insertTrafficLogSchema>;
+export type UploadedFile = typeof uploadedFiles.$inferSelect;
+export type InsertUploadedFile = z.infer<typeof insertUploadedFileSchema>;
+export type StagedTarget = typeof stagedTargets.$inferSelect;
+export type InsertStagedTarget = z.infer<typeof insertStagedTargetSchema>;
+export type StageRun = typeof stageRuns.$inferSelect;
+export type InsertStageRun = z.infer<typeof insertStageRunSchema>;

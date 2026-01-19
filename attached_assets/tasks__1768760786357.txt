@@ -1,0 +1,134 @@
+Act as a Principal Cybersecurity Engineer and Offensive Security Architect.
+
+This prompt is a CONTINUATION and CONSOLIDATION of previous upgrades.
+Do NOT reset, simplify, or rewrite the scanner.
+Assume the scanner already supports crawling, verification, and basic accuracy controls.
+
+Your task is to HARDEN accuracy, ELIMINATE false CVEs, ENFORCE deep scanning,
+and EXTENSIVELY upgrade SQL injection capabilities.
+
+====================================================
+GLOBAL PHILOSOPHY
+====================================================
+- This tool prioritizes QUALITY over SPEED.
+- Fast scans are unacceptable and considered incomplete.
+- Deep, slow, multi-phase analysis is mandatory.
+- Never guess vulnerabilities.
+- Never assume CVEs.
+- Never optimize for scan time at the expense of correctness.
+
+====================================================
+SCAN EXECUTION & SPEED CONTROL
+====================================================
+- Enforce intentional slowness.
+- Introduce time-based scan budgets per parameter and per module.
+- Do not allow early stopping after first indicator.
+- Require multiple payload classes and retries before conclusions.
+- If a scan finishes unusually fast, explicitly mark it as PARTIAL.
+
+Display scan depth metrics:
+- Total requests
+- Payloads per parameter
+- Time spent per phase
+- Verification retries
+
+====================================================
+CVE HANDLING (CRITICAL – ZERO TOLERANCE FOR ERRORS)
+====================================================
+Add a dedicated CVE VALIDATION & FILTERING LAYER.
+
+CVE RULES:
+- CVEs must NEVER be inferred from technology names alone.
+- CVEs must NEVER be inferred from generic vulnerability types.
+- CVEs must NEVER be reported without strict validation.
+
+A CVE can ONLY be reported if ALL are true:
+1) Exact technology/component is confirmed using multiple signals.
+2) Exact version (or vulnerable range) is identified.
+3) Observed behavior matches the CVE exploit conditions.
+4) The CVE is remotely exploitable via HTTP black-box testing.
+
+NEGATIVE CVE LOGIC (MANDATORY):
+- If the target is custom-built → suppress CMS/plugin CVEs.
+- If plugin/framework is not explicitly detected → suppress its CVEs.
+- If a CVE is memory corruption, internal-only, or config-dependent → DO NOT REPORT.
+- If exploitability cannot be validated → DO NOT REPORT.
+
+SERVER / INFRA CVEs:
+- Never report nginx, apache, openssl, or system-level CVEs unless:
+  - Version is confirmed
+  - Exploit is HTTP-reachable
+  - Conditions can be reasonably validated
+- Otherwise mark as NOT SCANNABLE VIA WEB.
+
+CVE OUTPUT CONTROL:
+- Separate:
+  - CONFIRMED CVEs (high confidence only)
+  - POSSIBLE CVEs (informational, never high/critical)
+- Only CONFIRMED CVEs appear in executive summaries.
+
+FINAL CVE RULE:
+It is acceptable to miss CVEs.
+It is NOT acceptable to report incorrect CVEs.
+
+====================================================
+ADVANCED SQL INJECTION (MAJOR UPGRADE)
+====================================================
+Upgrade SQL injection testing to a professional, bug-bounty-level engine.
+
+DISCOVERY:
+- Perform SQL-focused crawling and parameter mining.
+- Identify numeric, string, JSON, header-based, and hidden parameters.
+- Infer parameter context and backend behavior before payload injection.
+
+SQLI TESTING MUST INCLUDE:
+- Error-based SQLi with DB-specific fingerprinting.
+- Boolean-based SQLi with true/false differential logic.
+- Time-based blind SQLi with statistical timing analysis.
+- Union-based SQLi with column count discovery and reflection validation.
+- Stacked queries ONLY when backend supports it.
+
+ADVANCED SQLI LOGIC:
+- Use multi-request comparisons, not single responses.
+- Establish latency baselines before time-based attacks.
+- Require statistically significant timing deviation.
+- Detect WAF interference and adapt payload encoding.
+- Support DB fingerprinting (MySQL, PostgreSQL, MSSQL, Oracle).
+
+STATEFUL & SEQUENCE TESTING:
+- Test SQLi across workflows, not isolated requests.
+- Re-test confirmed SQLi using alternate payload classes.
+- Verify exploit stability before reporting.
+
+SQLI REPORTING:
+- Never report SQLi without behavioral proof.
+- Separate:
+  - CONFIRMED SQLi
+  - POTENTIAL SQLi (clearly marked, low severity)
+- Provide reasoning, not just payloads.
+
+====================================================
+INTELLIGENCE & CORRELATION
+====================================================
+- Correlate weak signals across requests and modules.
+- Combine low-risk findings into real exploit paths.
+- Suppress isolated, non-reproducible indicators.
+
+====================================================
+DEFENSE AWARENESS
+====================================================
+- Detect WAFs, rate limiting, and bot protections.
+- Adapt scan pacing and payload strategy accordingly.
+- Do NOT misclassify defensive behavior as vulnerabilities.
+
+====================================================
+FINAL PRINCIPLES
+====================================================
+- Depth over speed.
+- Verification over volume.
+- Reasoning over heuristics.
+- This tool is intended for professional penetration testing and bug bounty research.
+- Build it as if findings will be reviewed by senior security engineers.
+
+Take your time.
+Accuracy is the product.
