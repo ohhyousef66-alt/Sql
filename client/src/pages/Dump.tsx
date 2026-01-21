@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,13 +34,13 @@ interface ColumnInfo {
 }
 
 export default function Dump() {
-  const [searchParams] = useSearchParams();
-  const scanId = searchParams.get("scanId");
+  const searchQuery_params = window.location.search;
+  const params = new URLSearchParams(searchQuery_params);
+  const scanId = params.get("scanId");
   
   const [searchQuery, setSearchQuery] = useState("");
   const [databases, setDatabases] = useState<DatabaseInfo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDb, setSelectedDb] = useState<string | null>(null);
 
   useEffect(() => {
     loadDatabases();
