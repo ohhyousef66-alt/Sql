@@ -253,6 +253,115 @@ export const insertStageRunSchema = createInsertSchema(stageRuns).omit({
   createdAt: true,
 });
 
+// ============================================================
+// DATA DUMPING ENGINE - SQLi Dumper Feature
+// ============================================================
+
+// Extracted Databases from vulnerable targets
+export const extractedDatabases = pgTable("extracted_databases", {
+  id: serial("id").primaryKey(),
+  vulnerabilityId: integer("vulnerability_id").references(() => vulnerabilities.id).notNull(),
+  scanId: integer("scan_id").references(() => scans.id).notNull(),
+  targetUrl: text("target_url").notNull(),
+  databaseName: text("database_name").notNull(),
+  dbType: text("db_type").notNull(), // mysql, postgresql, mssql, oracle, sqlite
+  extractionMethod: text("extraction_method").notNull(), // error-based, union-based, boolean-based, time-based
+  tableCount: integer("table_count").default(0),
+  status: text("status").notNull().default("discovered"), // discovered, dumping, completed, failed
+  extractedAt: timestamp("extracted_at").defaultNow(),
+  metadata: jsonb("metadata").$type<{
+    version?: string;
+    user?: string;
+    currentDb?: string;
+    serverInfo?: string;
+    privileges?: string[];
+  }>(),
+});
+
+// Extracted Tables from databases
+export const extractedTables = pgTable("extracted_tables", {
+  id: serial("id").primaryKey(),
+  databaseId: integer("database_id").references(() => extractedDatabases.id).notNull(),
+  tableName: text("table_name").notNull(),
+  rowCount: integer("row_count").default(0),
+  columnCount: integer("column_count").default(0),
+  status: text("status").notNull().default("discovered"), // discovered, dumping, completed, failed
+  extractedAt: timestamp("extracted_at").defaultNow(),
+});
+
+// Extracted Columns from tables
+export const extractedColumns = pgTable("extracted_columns", {
+  id: serial("id").primaryKey(),
+  tableId: integer("table_id").references(() => extractedTables.id).notNull(),
+  columnName: text("column_name").notNull(),
+  dataType: text("data_type"),
+  isNullable: boolean("is_nullable"),
+  columnKey: text("column_key"), // PRI, UNI, MUL, etc.
+  columnDefault: text("column_default"),
+  extra: text("extra"), // auto_increment, etc.
+  extractedAt: timestamp("extracted_at").defaultNow(),
+});
+
+// Extracted Data (actual rows)
+export const extractedData = pgTable("extracted_data", {
+  id: serial("id").primaryKey(),
+  tableId: integer("table_id").references(() => extractedTables.id).notNull(),
+  rowIndex: integer("row_index").notNull(),
+  rowData: jsonb("row_data").$type<Record<string, any>>().notNull(), // { column1: value1, column2: value2 }
+  extractedAt: timestamp("extracted_at").defaultNow(),
+});
+
+// Dumping Jobs - Track progress of data extraction
+export const dumpingJobs = pgTable("dumping_jobs", {
+  id: serial("id").primaryKey(),
+  vulnerabilityId: integer("vulnerability_id").references(() => vulnerabilities.id).notNull(),
+  scanId: integer("scan_id").references(() => scans.id).notNull(),
+  targetUrl: text("target_url").notNull(),
+  targetType: text("target_type").notNull(), // database, table, column
+  targetId: integer("target_id").notNull(), // ID of database/table/column
+  status: text("status").notNull().default("pending"), // pending, running, completed, failed, paused
+  progress: integer("progress").default(0), // 0-100
+  itemsTotal: integer("items_total").default(0),
+  itemsExtracted: integer("items_extracted").default(0),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  errorMessage: text("error_message"),
+  extractionMetrics: jsonb("extraction_metrics").$type<{
+    requestsSent: number;
+    avgResponseTime: number;
+    blocksEncountered: number;
+    retriesPerformed: number;
+    technique: string;
+    concurrency: number;
+  }>(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertExtractedDatabaseSchema = createInsertSchema(extractedDatabases).omit({
+  id: true,
+  extractedAt: true,
+});
+
+export const insertExtractedTableSchema = createInsertSchema(extractedTables).omit({
+  id: true,
+  extractedAt: true,
+});
+
+export const insertExtractedColumnSchema = createInsertSchema(extractedColumns).omit({
+  id: true,
+  extractedAt: true,
+});
+
+export const insertExtractedDataSchema = createInsertSchema(extractedData).omit({
+  id: true,
+  extractedAt: true,
+});
+
+export const insertDumpingJobSchema = createInsertSchema(dumpingJobs).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type Scan = typeof scans.$inferSelect;
 export type InsertScan = z.infer<typeof insertScanSchema>;
 export type Vulnerability = typeof vulnerabilities.$inferSelect;
@@ -267,3 +376,15 @@ export type StagedTarget = typeof stagedTargets.$inferSelect;
 export type InsertStagedTarget = z.infer<typeof insertStagedTargetSchema>;
 export type StageRun = typeof stageRuns.$inferSelect;
 export type InsertStageRun = z.infer<typeof insertStageRunSchema>;
+
+// Data Dumping Types
+export type ExtractedDatabase = typeof extractedDatabases.$inferSelect;
+export type InsertExtractedDatabase = z.infer<typeof insertExtractedDatabaseSchema>;
+export type ExtractedTable = typeof extractedTables.$inferSelect;
+export type InsertExtractedTable = z.infer<typeof insertExtractedTableSchema>;
+export type ExtractedColumn = typeof extractedColumns.$inferSelect;
+export type InsertExtractedColumn = z.infer<typeof insertExtractedColumnSchema>;
+export type ExtractedData = typeof extractedData.$inferSelect;
+export type InsertExtractedData = z.infer<typeof insertExtractedDataSchema>;
+export type DumpingJob = typeof dumpingJobs.$inferSelect;
+export type InsertDumpingJob = z.infer<typeof insertDumpingJobSchema>;

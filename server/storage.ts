@@ -7,6 +7,11 @@ import {
   uploadedFiles,
   stagedTargets,
   stageRuns,
+  extractedDatabases,
+  extractedTables,
+  extractedColumns,
+  extractedData,
+  dumpingJobs,
   type Scan,
   type InsertScan,
   type Vulnerability,
@@ -21,6 +26,16 @@ import {
   type InsertStagedTarget,
   type StageRun,
   type InsertStageRun,
+  type ExtractedDatabase,
+  type InsertExtractedDatabase,
+  type ExtractedTable,
+  type InsertExtractedTable,
+  type ExtractedColumn,
+  type InsertExtractedColumn,
+  type ExtractedData,
+  type InsertExtractedData,
+  type DumpingJob,
+  type InsertDumpingJob,
 } from "@shared/schema";
 import { eq, desc, and, lt, or, isNull } from "drizzle-orm";
 
@@ -79,6 +94,30 @@ export interface IStorage {
   getStageRun(id: number): Promise<StageRun | undefined>;
   getStageRunsByFile(fileId: number): Promise<StageRun[]>;
   updateStageRun(id: number, data: Partial<StageRun>): Promise<StageRun>;
+  
+  // Data Dumping (SQLi Dumper Feature)
+  getVulnerability(id: number): Promise<Vulnerability | undefined>;
+  createExtractedDatabase(data: InsertExtractedDatabase): Promise<ExtractedDatabase>;
+  getExtractedDatabase(id: number): Promise<ExtractedDatabase | undefined>;
+  getExtractedDatabases(vulnerabilityId: number): Promise<ExtractedDatabase[]>;
+  updateExtractedDatabase(id: number, data: Partial<ExtractedDatabase>): Promise<ExtractedDatabase>;
+  
+  createExtractedTable(data: InsertExtractedTable): Promise<ExtractedTable>;
+  getExtractedTable(id: number): Promise<ExtractedTable | undefined>;
+  getExtractedTables(databaseId: number): Promise<ExtractedTable[]>;
+  updateExtractedTable(id: number, data: Partial<ExtractedTable>): Promise<ExtractedTable>;
+  
+  createExtractedColumn(data: InsertExtractedColumn): Promise<ExtractedColumn>;
+  getExtractedColumns(tableId: number): Promise<ExtractedColumn[]>;
+  
+  createExtractedData(data: InsertExtractedData): Promise<ExtractedData>;
+  getExtractedData(tableId: number, limit?: number, offset?: number): Promise<ExtractedData[]>;
+  getExtractedDataCount(tableId: number): Promise<number>;
+  
+  createDumpingJob(data: InsertDumpingJob): Promise<DumpingJob>;
+  getDumpingJob(id: number): Promise<DumpingJob | undefined>;
+  getDumpingJobs(vulnerabilityId: number): Promise<DumpingJob[]>;
+  updateDumpingJob(id: number, data: Partial<DumpingJob>): Promise<DumpingJob>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -436,6 +475,132 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return result.length;
+  }
+
+  // ============================================================
+  // DATA DUMPING METHODS - SQLi Dumper Feature
+  // ============================================================
+
+  async getVulnerability(id: number): Promise<Vulnerability | undefined> {
+    const [vuln] = await db.select().from(vulnerabilities).where(eq(vulnerabilities.id, id));
+    return vuln;
+  }
+
+  async createExtractedDatabase(data: InsertExtractedDatabase): Promise<ExtractedDatabase> {
+    const [database] = await db.insert(extractedDatabases).values(data).returning();
+    return database;
+  }
+
+  async getExtractedDatabase(id: number): Promise<ExtractedDatabase | undefined> {
+    const [database] = await db.select().from(extractedDatabases).where(eq(extractedDatabases.id, id));
+    return database;
+  }
+
+  async getExtractedDatabases(vulnerabilityId: number): Promise<ExtractedDatabase[]> {
+    return await db
+      .select()
+      .from(extractedDatabases)
+      .where(eq(extractedDatabases.vulnerabilityId, vulnerabilityId))
+      .orderBy(desc(extractedDatabases.extractedAt));
+  }
+
+  async updateExtractedDatabase(id: number, data: Partial<ExtractedDatabase>): Promise<ExtractedDatabase> {
+    const [updated] = await db
+      .update(extractedDatabases)
+      .set(data)
+      .where(eq(extractedDatabases.id, id))
+      .returning();
+    return updated;
+  }
+
+  async createExtractedTable(data: InsertExtractedTable): Promise<ExtractedTable> {
+    const [table] = await db.insert(extractedTables).values(data).returning();
+    return table;
+  }
+
+  async getExtractedTable(id: number): Promise<ExtractedTable | undefined> {
+    const [table] = await db.select().from(extractedTables).where(eq(extractedTables.id, id));
+    return table;
+  }
+
+  async getExtractedTables(databaseId: number): Promise<ExtractedTable[]> {
+    return await db
+      .select()
+      .from(extractedTables)
+      .where(eq(extractedTables.databaseId, databaseId))
+      .orderBy(extractedTables.tableName);
+  }
+
+  async updateExtractedTable(id: number, data: Partial<ExtractedTable>): Promise<ExtractedTable> {
+    const [updated] = await db
+      .update(extractedTables)
+      .set(data)
+      .where(eq(extractedTables.id, id))
+      .returning();
+    return updated;
+  }
+
+  async createExtractedColumn(data: InsertExtractedColumn): Promise<ExtractedColumn> {
+    const [column] = await db.insert(extractedColumns).values(data).returning();
+    return column;
+  }
+
+  async getExtractedColumns(tableId: number): Promise<ExtractedColumn[]> {
+    return await db
+      .select()
+      .from(extractedColumns)
+      .where(eq(extractedColumns.tableId, tableId))
+      .orderBy(extractedColumns.columnName);
+  }
+
+  async createExtractedData(data: InsertExtractedData): Promise<ExtractedData> {
+    const [dataRow] = await db.insert(extractedData).values(data).returning();
+    return dataRow;
+  }
+
+  async getExtractedData(tableId: number, limit: number = 100, offset: number = 0): Promise<ExtractedData[]> {
+    return await db
+      .select()
+      .from(extractedData)
+      .where(eq(extractedData.tableId, tableId))
+      .orderBy(extractedData.rowIndex)
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async getExtractedDataCount(tableId: number): Promise<number> {
+    const result = await db
+      .select()
+      .from(extractedData)
+      .where(eq(extractedData.tableId, tableId));
+    return result.length;
+  }
+
+  async createDumpingJob(data: InsertDumpingJob): Promise<DumpingJob> {
+    const [job] = await db.insert(dumpingJobs).values(data).returning();
+    return job;
+  }
+
+  async getDumpingJob(id: number): Promise<DumpingJob | undefined> {
+    const [job] = await db.select().from(dumpingJobs).where(eq(dumpingJobs.id, id));
+    return job;
+  }
+
+  async getDumpingJobs(vulnerabilityId: number): Promise<DumpingJob[]> {
+    return await db
+      .select()
+      .from(dumpingJobs)
+      .where(eq(dumpingJobs.vulnerabilityId, vulnerabilityId))
+      .orderBy(desc(dumpingJobs.createdAt));
+  }
+
+  async updateDumpingJob(id: number, data: Partial<DumpingJob>): Promise<DumpingJob> {
+    const [updated] = await db
+      .update(dumpingJobs)
+      .set(data)
+      .where(eq(dumpingJobs.id, id))
+      .returning();
+    return updated;
   }
 }
 

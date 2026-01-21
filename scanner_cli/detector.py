@@ -19,36 +19,34 @@ class DetectionResult:
 
 SQL_ERROR_PATTERNS: Dict[str, List[Tuple[str, str]]] = {
     "mysql": [
-        (r"SQL syntax.*?MySQL", "syntax_error"),
-        (r"Warning.*?\bmysqli?_", "warning"),
+        # More specific patterns to reduce false positives
+        (r"<b>Warning</b>:\s+mysql", "warning"),  # Actual PHP warning
+        (r"<b>Fatal error</b>:.*?mysql", "fatal_error"),
         (r"MySQLSyntaxErrorException", "exception"),
-        (r"valid MySQL result", "result_error"),
-        (r"check the manual that (corresponds to|fits) your MySQL server version", "version_mismatch"),
-        (r"Unknown column '[^']+' in 'field list'", "column_error"),
-        (r"MySqlClient\.", "client_error"),
-        (r"com\.mysql\.jdbc", "jdbc_error"),
-        (r"\bYou have an error in your SQL syntax\b", "syntax_error"),
-        (r"mysql_fetch_array\(\)", "fetch_error"),
-        (r"mysql_num_rows\(\)", "rows_error"),
-        (r"supplied argument is not a valid MySQL", "argument_error"),
-        (r"Column count doesn't match value count", "column_count"),
-        (r"Duplicate entry '.*' for key", "duplicate_key"),
-        (r"Table '.*' doesn't exist", "table_missing"),
+        (r"mysql_fetch_array\(\):\s+supplied argument", "fetch_error"),
+        (r"mysql_num_rows\(\):\s+supplied argument", "rows_error"),
+        (r"\bYou have an error in your SQL syntax\b.*?near\s+['\"]", "syntax_error_near"),
+        (r"check the manual that corresponds to your MySQL server version for the right syntax", "version_syntax"),
+        (r"Unknown column '[^']+' in '(field list|where clause|order clause)'", "column_error"),
+        (r"Table '[^']+\.[^']+' doesn't exist", "table_missing"),
+        (r"Column count doesn't match value count at row", "column_count"),
+        (r"Duplicate entry '[^']+' for key '[^']+'", "duplicate_key"),
+        (r"com\.mysql\.jdbc\.exceptions", "jdbc_error"),
+        (r"MySqlClient\.MySqlException", "client_error"),
     ],
     "postgresql": [
-        (r"PostgreSQL.*?ERROR", "error"),
-        (r"Warning.*?\bpg_", "warning"),
-        (r"valid PostgreSQL result", "result_error"),
-        (r"Npgsql\.", "npgsql_error"),
-        (r"PG::SyntaxError:", "syntax_error"),
+        (r"<b>Warning</b>:.*?pg_", "warning"),
+        (r"<b>Fatal error</b>:.*?pg_", "fatal_error"),
+        (r"ERROR:\s+syntax error at or near ['\"]", "syntax_error"),
+        (r"ERROR:\s+unterminated quoted string at or near", "quote_error"),
+        (r"ERROR:\s+column \"[^\"]+\" does not exist", "column_error"),
+        (r"ERROR:\s+relation \"[^\"]+\" does not exist", "relation_error"),
+        (r"pg_query\(\):\s+Query failed", "query_error"),
+        (r"pg_exec\(\):\s+Query failed", "exec_error"),
         (r"org\.postgresql\.util\.PSQLException", "psql_exception"),
-        (r"ERROR:\s+syntax error at or near", "syntax_error"),
-        (r"ERROR:\s+unterminated quoted string", "quote_error"),
-        (r"ERROR:\s+column \".*\" does not exist", "column_error"),
-        (r"ERROR:\s+relation \".*\" does not exist", "relation_error"),
-        (r"pg_query\(\):", "query_error"),
-        (r"pg_exec\(\):", "exec_error"),
-        (r"current transaction is aborted", "transaction_error"),
+        (r"Npgsql\.PostgresException", "npgsql_error"),
+        (r"PG::SyntaxError:", "syntax_error"),
+        (r"current transaction is aborted, commands ignored", "transaction_error"),
     ],
     "mssql": [
         (r"\bOLE DB\b.*?\bSQL Server\b", "oledb_error"),
@@ -217,10 +215,18 @@ class SQLiDetector:
         Returns:
             DetectionResult with vulnerability assessment
         """
+        # Check for NEW errors not present in baseline
         for db_type, patterns in self.compiled_patterns.items():
             for pattern, error_type in patterns:
                 match = pattern.search(response_text)
                 if match:
+                    # CRITICAL: Check if error also exists in baseline
+                    if baseline_text and pattern.search(baseline_text):
+                        # Error exists in both baseline and injected response
+                        # This is NOT a vulnerability, just a normal error page
+                        continue
+                    
+                    # New error appeared only after injection - this is a vulnerability!
                     confidence = self._calculate_confidence(db_type, error_type, response_text)
                     return DetectionResult(
                         vulnerable=True,

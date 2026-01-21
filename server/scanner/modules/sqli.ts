@@ -270,18 +270,16 @@ const CONFIDENCE_THRESHOLDS = {
   POTENTIAL: { minClasses: 1, minStability: 0, minConfidence: 50 },
 };
 
-// Zero-Speed Directive: No phase timeout limits - complete when work queue empty
-// Use max safe value for setTimeout (2^31 - 1 = ~24.8 days)
-const MAX_SAFE_TIMEOUT = 2147483647;
-const BASELINE_PHASE_TIMEOUT = MAX_SAFE_TIMEOUT;
-const ERROR_PHASE_TIMEOUT = MAX_SAFE_TIMEOUT;
-const BOOLEAN_PHASE_TIMEOUT = MAX_SAFE_TIMEOUT;
-const TIME_PHASE_TIMEOUT = MAX_SAFE_TIMEOUT;
-const PARAMETER_TOTAL_TIMEOUT = MAX_SAFE_TIMEOUT;
+// FIXED: Realistic phase timeout limits - prevent deadlock
+const BASELINE_PHASE_TIMEOUT = 5 * 60 * 1000;  // 5 minutes
+const ERROR_PHASE_TIMEOUT = 10 * 60 * 1000;    // 10 minutes
+const BOOLEAN_PHASE_TIMEOUT = 10 * 60 * 1000;  // 10 minutes
+const TIME_PHASE_TIMEOUT = 10 * 60 * 1000;     // 10 minutes
+const PARAMETER_TOTAL_TIMEOUT = 15 * 60 * 1000; // 15 minutes per parameter
 
-// Zero-Speed Directive: Full payload coverage - no early exits
-const MAX_TIME_BASED_ATTEMPTS = 100;    // Test ALL time-based payloads
-const EARLY_REJECTION_THRESHOLD = 100;  // Never reject early - complete all probes
+// FIXED: Reasonable payload limits - prevent endless testing
+const MAX_TIME_BASED_ATTEMPTS = 30;    // Test 30 time-based payloads max
+const EARLY_REJECTION_THRESHOLD = 20;  // Stop early if clear rejection pattern
 
 // Known vulnerable targets for self-validation (UPDATED Jan 2026)
 // These targets MUST be detected as vulnerable - silence is failure

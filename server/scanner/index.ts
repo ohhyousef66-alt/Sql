@@ -21,14 +21,11 @@ import { AdaptiveTestingEngine, DynamicProgressTracker, ResourceOptimizer } from
 // SQL-ONLY ENGINE: All CVE, XSS, LFI, SSRF, fingerprinting logic REMOVED
 // This scanner focuses EXCLUSIVELY on SQL injection detection
 
-// Zero-Speed Directive: No module timeout limits - scan completes when work queue empty
-// Use max safe value for setTimeout (2^31 - 1 = ~24.8 days)
-const MAX_SAFE_TIMEOUT = 2147483647;
-const FULL_MODE_TIMEOUT = MAX_SAFE_TIMEOUT;
-const FOCUSED_MODE_TIMEOUT = MAX_SAFE_TIMEOUT;
-// Zero-Speed Directive: Very high stall threshold (1 hour) to accommodate slow targets
-const STALL_DETECTION_THRESHOLD = 60 * 60 * 1000; // 1 hour of no activity = stall
-const WATCHDOG_CHECK_INTERVAL = 60 * 1000; // Check every 60 seconds
+// FIXED: Realistic timeout values instead of MAX_SAFE_INTEGER
+const FULL_MODE_TIMEOUT = 60 * 60 * 1000; // 1 hour for full scan
+const FOCUSED_MODE_TIMEOUT = 30 * 60 * 1000; // 30 minutes for focused scan
+const STALL_DETECTION_THRESHOLD = 10 * 60 * 1000; // 10 minutes of no activity = stall
+const WATCHDOG_CHECK_INTERVAL = 30 * 1000; // Check every 30 seconds
 
 
 interface ModuleResult {
@@ -725,8 +722,8 @@ export class VulnerabilityScanner {
           );
           return sqliModule.scan(urlsToTest);
         },
-        // SQL-only mode: use MAX_SAFE_TIMEOUT to avoid 32-bit overflow
-        Math.min(this.moduleTimeout, MAX_SAFE_TIMEOUT)
+        // FIXED: Use realistic timeout instead of MAX_SAFE_TIMEOUT
+        this.moduleTimeout
       );
       
       // Mark all tested URLs as completed in progress tracker

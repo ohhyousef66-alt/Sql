@@ -7,11 +7,11 @@ export interface ScanBudget {
 }
 
 export const DEFAULT_BUDGET: ScanBudget = {
-  totalBudgetMs: Number.MAX_SAFE_INTEGER,
-  perParameterBudgetMs: Number.MAX_SAFE_INTEGER,
-  perModuleBudgetMs: Number.MAX_SAFE_INTEGER,
+  totalBudgetMs: 60 * 60 * 1000, // FIXED: 1 hour max total scan time
+  perParameterBudgetMs: 5 * 60 * 1000, // FIXED: 5 minutes per parameter
+  perModuleBudgetMs: 15 * 60 * 1000, // FIXED: 15 minutes per module (phase)
   minimumRequestsPerParam: 50,
-  zeroSpeedMode: true,
+  zeroSpeedMode: false, // FIXED: Disable zero-speed mode
 };
 
 export interface RequiredWorkUnits {
@@ -172,6 +172,7 @@ export class ExecutionController {
   
   // Adaptive Testing Metrics
   private adaptiveConcurrency: number = 10;
+  private maxConcurrency: number = 100; // FIXED: Hard limit to prevent explosion
   private parametersSkipped: number = 0;
   private coveragePerHour: number = 0;
   private estimatedTimeRemaining: number = 0;
@@ -573,7 +574,10 @@ export class ExecutionController {
     workQueueSize?: number;
     successRate?: number;
   }): void {
-    if (metrics.concurrency !== undefined) this.adaptiveConcurrency = metrics.concurrency;
+    if (metrics.concurrency !== undefined) {
+      // FIXED: Apply hard limit to prevent concurrency explosion
+      this.adaptiveConcurrency = Math.min(metrics.concurrency, this.maxConcurrency);
+    }
     if (metrics.parametersSkipped !== undefined) this.parametersSkipped = metrics.parametersSkipped;
     if (metrics.coveragePerHour !== undefined) this.coveragePerHour = metrics.coveragePerHour;
     if (metrics.estimatedTimeRemaining !== undefined) this.estimatedTimeRemaining = metrics.estimatedTimeRemaining;

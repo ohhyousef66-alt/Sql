@@ -5,12 +5,14 @@ import { Layout } from "@/components/Layout";
 import { StatusBadge, ScanStatus } from "@/components/StatusBadge";
 import { SeverityBadge } from "@/components/SeverityBadge";
 import { LiveConsole } from "@/components/LiveConsole";
+import DataExplorer from "@/components/DataExplorer";
 import { 
   AlertTriangle, Download, RefreshCw, ChevronRight, Globe, 
   FileText, Activity, ShieldCheck, Bug, Terminal, Check, HelpCircle,
-  Link2, Zap, ArrowRight, XCircle, Network, FolderSearch, Radio, List
+  Link2, Zap, ArrowRight, XCircle, Network, FolderSearch, Radio, List, Database
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import type { VerificationStatus } from "@shared/schema";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -491,7 +493,7 @@ export default function ScanDetails() {
   const { mutate: exportReport, isPending: isExporting } = useExportReport();
   const { mutate: cancelScan, isPending: isCancelling } = useCancelScan();
   
-  const [activeTab, setActiveTab] = useState<"findings" | "discovery" | "traffic" | "logs">("findings");
+  const [activeTab, setActiveTab] = useState<"findings" | "discovery" | "traffic" | "logs" | "data">("findings");
   const { data: trafficLogs } = useTrafficLogs(scanId);
   
   // Fetch child scans if this is a batch parent
@@ -914,6 +916,19 @@ export default function ScanDetails() {
                 >
                    <Terminal className="w-4 h-4" /> Live Logs
                 </button>
+                <button 
+                  onClick={() => setActiveTab('data')}
+                  className={cn(
+                    "px-6 py-3 font-medium text-sm border-b-2 transition-colors flex items-center gap-2",
+                    activeTab === 'data' 
+                      ? "border-primary text-primary" 
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  )}
+                  data-testid="tab-data"
+                  title="SQLi Dumper - Extract database contents"
+                >
+                   <Database className="w-4 h-4" /> Data Dumper
+                </button>
              </div>
 
              {activeTab === 'discovery' ? (
@@ -1037,6 +1052,30 @@ export default function ScanDetails() {
                            </>
                         )}
                      </div>
+                   )}
+                </div>
+             ) : activeTab === 'data' ? (
+                <div className="space-y-6">
+                   {vulnerabilities && vulnerabilities.length > 0 ? (
+                      vulnerabilities.map((vuln) => (
+                         vuln.verificationStatus === 'confirmed' && (
+                            <DataExplorer 
+                               key={vuln.id}
+                               vulnerabilityId={vuln.id}
+                               targetUrl={vuln.url}
+                            />
+                         )
+                      ))
+                   ) : (
+                      <Card className="p-12">
+                         <div className="text-center space-y-3">
+                            <Database className="w-12 h-12 mx-auto text-muted-foreground/50" />
+                            <h3 className="text-lg font-bold text-muted-foreground">No Vulnerabilities Found</h3>
+                            <p className="text-sm text-muted-foreground/70">
+                               Data dumping requires confirmed SQL injection vulnerabilities.
+                            </p>
+                         </div>
+                      </Card>
                    )}
                 </div>
              ) : (

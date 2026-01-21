@@ -76,7 +76,7 @@ export class AdaptiveTestingEngine {
   private payloadSuccessHistory: Map<string, PayloadSuccessRecord> = new Map();
   private parameterHeuristicCache: Map<string, HeuristicProbeResult> = new Map();
   
-  private maxConcurrency = 5000;  // MASS-SCAN: Support 5,000 concurrent workers
+  private maxConcurrency = 100;  // FIXED: Hard limit to prevent explosion
   private minConcurrency = 1;
   private recentErrors: { time: number; code: number }[] = [];
   private recentSuccesses = 0;
