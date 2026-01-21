@@ -843,6 +843,7 @@ export async function registerRoutes(
   // ============================================================
 
   let activeMassScanner: any = null;
+  let activeMassScanId: number | null = null; // Track current mass scan ID
 
   // Start mass scan
   app.post("/api/mass-scan/start", async (req, res) => {
@@ -857,24 +858,53 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Maximum 100,000 targets allowed" });
       }
 
+      // Create parent scan for mass scan
+      const parentScan = await storage.createScan({
+        targetUrl: `mass-scan-${Date.now()}`,
+        scanMode: "sqli",
+        threads: settings?.threads || 10,
+        batchMode: true,
+      });
+      
+      activeMassScanId = parentScan.id;
+
+      // Create child scans for each target
+      const childScans: any[] = [];
+      for (const url of targets) {
+        const childScan = await storage.createScan({
+          targetUrl: url.trim(),
+          scanMode: "sqli",
+          threads: settings?.threads || 10,
+          parentId: parentScan.id,
+        });
+        childScans.push(childScan);
+      }
+
       const { MassScanner } = await import("./scanner/mass-scanner");
       const concurrency = settings?.concurrency || 50;
-      const scanner = new MassScanner(concurrency);
+      const scanner = new MassScanner(concurrency, settings?.threads || 10);
       activeMassScanner = scanner;
 
-      const scanTargets = targets.map((url: string, index: number) => ({
-        url: url.trim(),
-        id: index + 1,
+      const scanTargets = childScans.map((scan) => ({
+        url: scan.targetUrl,
+        id: scan.id,
       }));
 
       // Start scanning in background
       scanner.scanBatch(scanTargets).then(() => {
         console.log(`[Mass Scan] Complete`);
+        storage.updateScan(parentScan.id, {
+          status: "completed",
+          progress: 100,
+          endTime: new Date(),
+        });
         activeMassScanner = null;
+        activeMassScanId = null;
       });
 
       res.json({
         message: "Mass scan started",
+        scanId: parentScan.id,
         totalTargets: targets.length,
         concurrency,
       });
@@ -887,6 +917,30 @@ export async function registerRoutes(
   // Get mass scan progress
   app.get("/api/mass-scan/progress", async (req, res) => {
     try {
+      // If no active scanner, check if we have saved state
+      if (!activeMassScanner && activeMassScanId) {
+        const parentScan = await storage.getScan(activeMassScanId);
+        if (parentScan && parentScan.status === "completed") {
+          const childScans = await storage.getChildScans(activeMassScanId);
+          const vulnerable = childScans.filter(async (s) => {
+            const vulns = await storage.getVulnerabilities(s.id);
+            return vulns.length > 0;
+          }).length;
+          
+          return res.json({
+            running: false,
+            total: childScans.length,
+            completed: childScans.filter(s => s.status === "completed").length,
+            scanning: 0,
+            vulnerable,
+            clean: childScans.length - vulnerable,
+            errors: childScans.filter(s => s.status === "failed").length,
+            progress: 100,
+            scanId: activeMassScanId,
+          });
+        }
+      }
+      
       if (!activeMassScanner) {
         return res.json({
           running: false,
@@ -902,13 +956,14 @@ export async function registerRoutes(
 
       const stats = activeMassScanner.getStats();
       const percentComplete = stats.total > 0 
-        ? Math.round((stats.completed / stats.total) * 100) 
+        ? Math.round(((stats.completed + stats.errors) / stats.total) * 100) 
         : 0;
 
       res.json({
         running: true,
         ...stats,
         progress: percentComplete,
+        scanId: activeMassScanId,
       });
     } catch (error: any) {
       console.error("Progress error:", error);
@@ -919,6 +974,30 @@ export async function registerRoutes(
   // Get vulnerable targets from mass scan
   app.get("/api/mass-scan/vulnerable", async (req, res) => {
     try {
+      // If we have active mass scan ID, get its child scans
+      if (activeMassScanId) {
+        const childScans = await storage.getChildScans(activeMassScanId);
+        const vulnerableScans = [];
+
+        for (const scan of childScans) {
+          const vulns = await storage.getVulnerabilities(scan.id);
+          if (vulns.length > 0 && vulns[0]) {
+            vulnerableScans.push({
+              scanId: scan.id,
+              url: scan.targetUrl,
+              vulnerability: {
+                id: vulns[0].id,
+                type: vulns[0].type,
+                parameter: vulns[0].parameter,
+                payload: vulns[0].payload,
+              },
+            });
+          }
+        }
+
+        return res.json(vulnerableScans);
+      }
+      
       if (!activeMassScanner) {
         // Get recent completed scans with vulnerabilities
         const scans = await storage.getScans();

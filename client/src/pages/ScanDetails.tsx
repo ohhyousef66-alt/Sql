@@ -1029,6 +1029,19 @@ export default function ScanDetails() {
                                         <p className="text-muted-foreground text-sm">{vuln.remediation}</p>
                                      </div>
                                  )}
+                                 
+                                 {/* Show Database Button - Only for confirmed SQL injection */}
+                                 {vuln.verificationStatus === "confirmed" && vuln.type.toLowerCase().includes("sql") && (
+                                   <div className="pt-2">
+                                     <button
+                                       onClick={() => setActiveTab('data')}
+                                       className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground font-semibold py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
+                                     >
+                                       <Database className="w-5 h-5" />
+                                       Show Database
+                                     </button>
+                                   </div>
+                                 )}
                               </AccordionContent>
                            </AccordionItem>
                         ))}
