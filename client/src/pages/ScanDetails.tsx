@@ -622,12 +622,9 @@ export default function ScanDetails() {
                     </div>
                     <div className="flex items-center gap-3">
                       {child.status === 'scanning' && (
-                        <div className="flex items-center gap-2">
-                          <div className="h-1.5 w-20 bg-muted rounded-full overflow-hidden">
-                            <div className="h-full bg-primary transition-all duration-300" style={{ width: `${child.progress || 0}%` }} />
-                          </div>
-                          <span className="text-xs font-mono text-primary">{child.progress || 0}%</span>
-                        </div>
+                        <span className="text-xs text-muted-foreground animate-pulse">
+                          Scanning...
+                        </span>
                       )}
                       {childVulnCount > 0 && (
                         <Badge variant="destructive" className="text-xs">

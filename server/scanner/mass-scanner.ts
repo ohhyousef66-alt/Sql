@@ -33,9 +33,6 @@ export class MassScanner {
     this.threads = threads;
   }
 
-  /**
-   * Scan batch of URLs using existing VulnerabilityScanner
-   */
   async scanBatch(
     targets: MassScanTarget[],
     onProgress?: (completed: number, total: number, current?: MassScanResult) => void
@@ -46,6 +43,17 @@ export class MassScanner {
 
     const total = targets.length;
     let completed = 0;
+
+    // Initialize results with scanning status
+    for (const target of targets) {
+      this.results.set(target.id, {
+        targetId: target.id,
+        url: target.url,
+        scanId: 0, // Will be updated
+        status: "scanning",
+        vulnerabilitiesFound: 0,
+      });
+    }
 
     console.log(`[Mass Scanner] Starting ${total} scans with ${this.concurrency} concurrent, ${this.threads} threads each`);
 

