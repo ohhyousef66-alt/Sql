@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/Layout";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Play, Square, Download, Database, CheckCircle2, XCircle, Loader2, Eye } from "lucide-react";
+import { 
+  Upload, Play, Square, Download, Database, CheckCircle2, XCircle, 
+  Loader2, Eye, MoreVertical, ExternalLink 
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +12,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useLocation } from "wouter";
 
 interface TargetResult {
@@ -184,9 +193,15 @@ export default function MassScan() {
   return (
     <Layout>
       <div className="container mx-auto p-6 space-y-6" dir="rtl">
-        <div>
-          <h1 className="text-4xl font-bold">Mass Scanner</h1>
-          <p className="text-muted-foreground mt-2">استخدام المحرك الأصلي للفحص الشامل</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold">Mass Scanner</h1>
+            <p className="text-muted-foreground mt-2">استخدام المحرك الأصلي للفحص الشامل</p>
+          </div>
+          <Button onClick={() => setLocation("/dump")} variant="outline" size="lg">
+            <Database className="h-5 w-5 mr-2" />
+            صفحة Dump
+          </Button>
         </div>
 
         {/* Input */}
@@ -268,6 +283,68 @@ export default function MassScan() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Success Box */}
+        {stats.vulnerable > 0 && (
+          <Card className="border-green-500 border-2 bg-green-50 dark:bg-green-950">
+            <CardHeader>
+              <CardTitle className="text-green-600 flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5" />
+                Success - المواقع المخترقة والمؤكدة
+                <Badge className="bg-green-600">{stats.vulnerable}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {results
+                  .filter((r) => r.vulnerabilitiesCount > 0)
+                  .map((result, idx) => (
+                    <div
+                      key={result.id}
+                      className="flex items-center justify-between p-3 bg-white dark:bg-gray-900 rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline" className="w-8 h-8 flex items-center justify-center">
+                          {idx + 1}
+                        </Badge>
+                        <div>
+                          <div className="font-medium">{result.url}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {result.vulnerabilitiesCount} ثغرات - Dump متاح ✅
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setLocation(`/dump?scanId=${result.scanId}`)}>
+                              <Database className="h-4 w-4 mr-2" />
+                              Dump في الصفحة الأساسية
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => window.open(`/dump?scanId=${result.scanId}`, "_blank")}
+                            >
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                              Dump في نافذة جديدة
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => viewScan(result.scanId!)}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              عرض تفاصيل الفحص
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats */}
         {results.length > 0 && (
@@ -358,14 +435,27 @@ export default function MassScan() {
                                 عرض
                               </Button>
                               {result.vulnerabilitiesCount > 0 && (
-                                <Button
-                                  size="sm"
-                                  className="bg-green-600 hover:bg-green-700"
-                                  onClick={() => startDump(result.scanId!)}
-                                >
-                                  <Database className="h-4 w-4 mr-1" />
-                                  Dump
-                                </Button>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                                      <Database className="h-4 w-4 mr-1" />
+                                      Dump
+                                      <MoreVertical className="h-3 w-3 ml-1" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent>
+                                    <DropdownMenuItem onClick={() => setLocation(`/dump?scanId=${result.scanId}`)}>
+                                      <Database className="h-4 w-4 mr-2" />
+                                      Dump في الصفحة الأساسية
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => window.open(`/dump?scanId=${result.scanId}`, "_blank")}
+                                    >
+                                      <ExternalLink className="h-4 w-4 mr-2" />
+                                      Dump في نافذة جديدة
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               )}
                             </>
                           )}

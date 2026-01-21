@@ -78,7 +78,7 @@ export class MassScanner {
   }
 
   /**
-   * Scan single target using VulnerabilityScanner
+   * Scan single target using VulnerabilityScanner + Auto-verify with dump
    */
   private async scanSingleTarget(target: MassScanTarget): Promise<MassScanResult> {
     try {
@@ -100,7 +100,7 @@ export class MassScanner {
         vulnerabilitiesFound: 0,
       };
 
-      // Run VulnerabilityScanner
+      // Run VulnerabilityScanner (FULL QUALITY - same as normal scan)
       const scanner = new VulnerabilityScanner(
         scan.id,
         target.url,
@@ -108,14 +108,13 @@ export class MassScanner {
         this.threads
       );
 
-      // Start scan and wait for completion
       scanner.run().catch((err) => {
         console.error(`[Mass Scanner] Scan ${scan.id} error:`, err);
       });
 
-      // Poll until scan completes
+      // Poll with progress updates
       let attempts = 0;
-      const maxAttempts = 600; // 10 minutes max (1 second intervals)
+      const maxAttempts = 1800; // 30 minutes - HIGH QUALITY SCAN
       
       while (attempts < maxAttempts) {
         await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -124,15 +123,29 @@ export class MassScanner {
         if (!updatedScan) break;
 
         if (updatedScan.status === "completed" || updatedScan.status === "failed") {
-          // Get vulnerabilities
           const vulns = await storage.getVulnerabilities(scan.id);
-          
-          result.status = "completed";
           result.vulnerabilitiesFound = vulns.length;
 
           if (vulns.length > 0) {
-            console.log(`[Mass Scanner] ✅ ${target.url} - ${vulns.length} vulnerabilities`);
+            console.log(`[Mass Scanner] ✅ ${target.url} - ${vulns.length} vulns - Verifying dump...`);
+            
+            // AUTO-VERIFY with dump
+            const { DataDumpingEngine } = await import("./data-dumping-engine");
+            try {
+              const engine = new DataDumpingEngine(vulns[0].id, vulns[0].url, vulns[0].parameter);
+              const dbInfo = await engine.getCurrentDatabaseInfo();
+              
+              if (dbInfo && dbInfo.database) {
+                result.status = "vulnerable"; // SUCCESS!
+                console.log(`[Mass Scanner] 🎯 SUCCESS: ${target.url} - DB: ${dbInfo.database}`);
+              } else {
+                result.status = "completed";
+              }
+            } catch (e) {
+              result.status = "completed"; // Vuln found but dump failed
+            }
           } else {
+            result.status = "clean";
             console.log(`[Mass Scanner] ❌ ${target.url} - clean`);
           }
           
