@@ -242,12 +242,15 @@ export class VulnerabilityScanner {
       // Import DataDumpingEngine
       const { DataDumpingEngine } = await import("./data-dumping-engine");
       
+      // Use the actual payload from vulnerability as injection point
+      const injectionPoint = vuln.payload || `${vuln.parameter}=*INJECT*`;
+      
       const context = {
         targetUrl: vuln.url,
         vulnerableParameter: vuln.parameter!,
-        dbType: "mysql" as const,
-        technique: "error-based" as const,
-        injectionPoint: vuln.payload || "",
+        dbType: "mysql" as const, // TODO: Auto-detect from vuln.evidence
+        technique: "error-based" as const, // TODO: Detect from vuln.type
+        injectionPoint: injectionPoint,
         signal: this.abortController.signal,
         onProgress: async (progress: number, message: string) => {
           await this.logger.info("Dumper", `[${progress}%] ${message}`);
@@ -266,9 +269,13 @@ export class VulnerabilityScanner {
         await this.logger.info("Scanner", `✅ Database accessible: ${dbInfo.name}`);
         
         // Start full dump
-        const result = await engine.extractAll();
+        const result = await engine.dumpAll();
         
-        await this.logger.info("Scanner", `✅ Dump completed: ${result.databases.length} databases extracted`);
+        if (result.success) {
+          await this.logger.info("Scanner", `✅ Dump completed: ${result.databases.length} databases found`);
+        } else {
+          await this.logger.warn("Scanner", `⚠️ Dump failed: ${result.error}`);
+        }
       } else {
         await this.logger.warn("Scanner", "⚠️ Database not accessible - dump failed");
       }

