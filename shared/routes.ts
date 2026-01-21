@@ -103,6 +103,35 @@ export const api = {
         404: errorSchemas.notFound,
       },
     },
+    getEnumerationResults: {
+      method: "GET" as const,
+      path: "/api/scans/:id/enumeration",
+      responses: {
+        200: z.array(z.object({
+          id: z.number(),
+          databaseName: z.string(),
+          dbType: z.string(),
+          extractionMethod: z.string(),
+          tableCount: z.number(),
+          status: z.string(),
+          extractedAt: z.date(),
+          tables: z.array(z.object({
+            id: z.number(),
+            tableName: z.string(),
+            columnCount: z.number(),
+            status: z.string(),
+            extractedAt: z.date(),
+            columns: z.array(z.object({
+              id: z.number(),
+              columnName: z.string(),
+              dataType: z.string().nullable(),
+              extractedAt: z.date(),
+            })),
+          })),
+        })),
+        404: errorSchemas.notFound,
+      },
+    },
   },
   
   // Mass-Scan Management API

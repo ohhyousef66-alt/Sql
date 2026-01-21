@@ -134,42 +134,71 @@ export class MassScanner {
           result.vulnerabilitiesFound = vulns.length;
 
           if (vulns.length > 0) {
-            console.log(`[Mass Scanner] ✅ ${target.url} - ${vulns.length} vulns - Verifying dump...`);
+            console.log(`[Mass Scanner] ✅ ${target.url} - ${vulns.length} vulns - Testing payloads in dumper...`);
             
-            // AUTO-VERIFY with dump
-            const { DataDumpingEngine } = await import("./data-dumping-engine");
+            // Try each vulnerability payload in dumper until one works
+            // Use integrated pipeline for post-confirmation
+            const { IntegratedPipelineAdapter } = await import("./integrated-pipeline-adapter");
+            let dumpSuccess = false;
+            
+            console.log(`[Mass Scanner] 🔬 Starting pipeline for ${target.url}`);
+            
+            // Create pipeline context
+            const pipelineContext = {
+              scanId: scanIdForTarget,
+              targetUrl: target.url,
+              vulnerabilities: vulns.slice(0, 5), // First 5 vulns for confirmation
+              enumerationEnabled: true,
+              userConsent: {
+                acknowledgedWarnings: [
+                  "I confirm this target is authorized for testing",
+                  "I will comply with all legal restrictions",
+                  "I am responsible for any consequences",
+                  "I will limit data extraction to necessary scope",
+                ],
+                metadata: {
+                  ipAddress: "mass-scanner",
+                  userAgent: "mass-scanner",
+                },
+              },
+            };
+            
             try {
-              // Only verify if we have a valid parameter
-              if (!vulns[0].parameter) {
-                result.status = "completed";
-                result.vulnerabilitiesFound = vulns.length;
-                console.log(`[Mass Scanner] ⚠️ ${target.url} - Vuln found but no parameter`);
-              } else {
-                const controller = new AbortController();
-                const context = {
-                  targetUrl: vulns[0].url,
-                  vulnerableParameter: vulns[0].parameter,
-                  dbType: "mysql" as const,
-                  technique: "error-based" as const,
-                  injectionPoint: vulns[0].payload || "",
-                  signal: controller.signal,
-                };
+              const pipeline = new IntegratedPipelineAdapter(pipelineContext);
+              
+              // Process vulnerabilities
+              await pipeline.processVulnerabilities(vulns.slice(0, 5));
+              
+              // Evaluate confirmation
+              const confirmed = await pipeline.evaluateConfirmation();
+              if (confirmed) {
+                console.log(`[Mass Scanner] ✅ ${target.url} - Confirmation passed`);
                 
-                const engine = new DataDumpingEngine(context);
-                const dbInfo = await engine.getCurrentDatabaseInfo();
-                
-                if (dbInfo && dbInfo.name && dbInfo.name !== "unknown") {
-                  result.status = "vulnerable"; // SUCCESS!
-                  result.vulnerabilitiesFound = vulns.length;
-                  console.log(`[Mass Scanner] 🎯 SUCCESS: ${target.url} - DB: ${dbInfo.name}`);
+                // Fingerprint database
+                const fingerprint = await pipeline.fingerprintDatabase();
+                if (fingerprint) {
+                  result.status = "vulnerable";
+                  dumpSuccess = true;
+                  console.log(`[Mass Scanner] 🎯 SUCCESS: ${target.url} - DB: ${fingerprint.type}`);
+                  
+                  // Enumerate database
+                  const enumResults = await pipeline.enumerateDatabase();
+                  if (enumResults) {
+                    console.log(`[Mass Scanner] 📚 ${target.url} - Found ${enumResults.databases.length} databases`);
+                  }
                 } else {
-                  result.status = "completed";
-                  result.vulnerabilitiesFound = vulns.length;
+                  console.log(`[Mass Scanner] ⚠️ ${target.url} - Fingerprinting failed`);
                 }
+              } else {
+                console.log(`[Mass Scanner] ❌ ${target.url} - Confirmation blocked`);
               }
-            } catch (e) {
-              result.status = "completed"; // Vuln found but dump failed
-              result.vulnerabilitiesFound = vulns.length;
+            } catch (e: any) {
+              console.log(`[Mass Scanner] ⚠️ Pipeline error: ${e.message}`);
+            }
+            
+            if (!dumpSuccess) {
+              result.status = "completed"; // Vuln found but pipeline didn't confirm
+              console.log(`[Mass Scanner] ❌ ${target.url} - Vulnerability found but not confirmed by pipeline`);
             }
           } else {
             result.status = "completed";

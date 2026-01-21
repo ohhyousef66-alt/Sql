@@ -4,7 +4,7 @@ import { Crawler } from "./crawler";
 import { SQLiModule } from "./modules/sqli";
 import { SecondOrderSQLiDetector } from "./second-order-sqli";
 import { ScannerLogger, DebugLogEntry } from "./utils/logger";
-import { formatErrorForLogging, TrafficLogger } from "./utils";
+import { formatErrorForLogging, TrafficLogger, makeRequest, hashString } from "./utils";
 import { 
   ExecutionController, 
   ScanBudget, 
@@ -17,6 +17,9 @@ import {
 import { DefenseAwareness } from "./defense-awareness";
 import { globalPayloadRepository } from "./payload-repository";
 import { AdaptiveTestingEngine, DynamicProgressTracker, ResourceOptimizer } from "./adaptive-testing";
+import { EventDrivenSQLiDetector } from "./event-driven-detector";
+import { ImmediateExploitationEngine } from "./immediate-exploitation";
+import { SQLiContext, ConfirmationCompleteEvent } from "./sqli-context";
 
 // SQL-ONLY ENGINE: All CVE, XSS, LFI, SSRF, fingerprinting logic REMOVED
 // This scanner focuses EXCLUSIVELY on SQL injection detection
@@ -78,6 +81,8 @@ export class VulnerabilityScanner {
   private multiTargetMode = false;
   private firstVulnFound = false; // Track first vulnerability for auto-dumping
   private dumpingStarted = false; // Track if dumping already started
+  private eventDrivenDetector: EventDrivenSQLiDetector;
+  private exploitationEngine: ImmediateExploitationEngine;
 
   constructor(scanId: number, targetUrl: string, scanMode: ScanMode = "sqli", threads: number = 10, budget?: Partial<ScanBudget>) {
     this.scanId = scanId;
@@ -104,6 +109,75 @@ export class VulnerabilityScanner {
     );
     this.progressTracker = new DynamicProgressTracker();
     this.resourceOptimizer = new ResourceOptimizer();
+    
+    // ⚡ EVENT-DRIVEN ARCHITECTURE
+    // Initialize event-driven detector and exploitation engine
+    this.exploitationEngine = new ImmediateExploitationEngine(scanId, this.log.bind(this));
+    this.eventDrivenDetector = new EventDrivenSQLiDetector(
+      this.log.bind(this),
+      {
+        onConfirmationComplete: async (event: ConfirmationCompleteEvent) => {
+          await this.handleConfirmationComplete(event);
+        },
+      }
+    );
+  }
+  
+  /**
+   * ⚡ Handle confirmation complete event - IMMEDIATE EXPLOITATION
+   * This is called automatically when SQLi is confirmed
+   * NO manual UI trigger needed
+   */
+  private async handleConfirmationComplete(event: ConfirmationCompleteEvent): Promise<void> {
+    const { context } = event;
+    
+    await this.log("info", `⚡ [AutoExploit] SQLi confirmed for ${context.parameter} - triggering IMMEDIATE exploitation`);
+    
+    // Report vulnerability BEFORE exploitation
+    await this.reportConfirmedVulnerability(context);
+    
+    if (event.shouldExploit) {
+      try {
+        // ⚡ AUTOMATIC EXPLOITATION - NO USER ACTION NEEDED
+        const { fingerprint, enumeration } = await this.exploitationEngine.exploit(context);
+        
+        if (enumeration.success && enumeration.databases.length > 0) {
+          await this.log("info", `✅ [AutoExploit] Enumeration complete: ${enumeration.databases.length} databases, ${enumeration.tables.size} tables extracted`);
+        } else {
+          await this.log("warn", `[AutoExploit] Exploitation attempted but no data extracted`);
+        }
+      } catch (error: any) {
+        await this.log("error", `[AutoExploit] Exploitation failed: ${error.message}`);
+      }
+    }
+  }
+  
+  /**
+   * Report confirmed vulnerability from sqliContext
+   */
+  private async reportConfirmedVulnerability(context: SQLiContext): Promise<void> {
+    const vuln: InsertVulnerability = {
+      scanId: this.scanId,
+      type: "sql_injection",
+      severity: "critical",
+      confidence: context.confidence,
+      url: context.url,
+      parameter: context.parameter || "unknown",
+      payload: context.workingPayload,
+      evidence: `SQLi confirmed via ${context.injectionType}. DB: ${context.dbFingerprint.type}${context.dbFingerprint.version ? " " + context.dbFingerprint.version : ""}`,
+      request: `${context.method} ${context.url}`,
+      response: `Confirmed after ${context.confirmationCount} attempts`,
+      remediation: "Use parameterized queries or prepared statements",
+      cwe: "CWE-89",
+      cvss: 9.8,
+      verificationStatus: "confirmed",
+    };
+    
+    await storage.insertVulnerability(vuln);
+    
+    // Update summary
+    this.summary.critical++;
+    this.summary.confirmed++;
   }
 
   public getThreads(): number {
@@ -233,55 +307,67 @@ export class VulnerabilityScanner {
   }
 
   /**
-   * Start auto-dumping after finding first confirmed vulnerability
+   * Test vulnerability in dumper (NO full dump, just test)
    */
-  private async startAutoDumping(vuln: Omit<InsertVulnerability, "scanId">): Promise<void> {
+  private async testInDumper(vuln: Omit<InsertVulnerability, "scanId">): Promise<void> {
     try {
-      await this.logger.info("Scanner", `Starting auto-dump for ${vuln.url} - Parameter: ${vuln.parameter}`);
+      await this.logger.info("Scanner", `🔬 Starting Post-Confirmation Pipeline`);
       
-      // Import DataDumpingEngine
-      const { DataDumpingEngine } = await import("./data-dumping-engine");
+      // Import IntegratedPipelineAdapter
+      const { IntegratedPipelineAdapter } = await import("./integrated-pipeline-adapter");
       
-      // Use the actual payload from vulnerability as injection point
-      const injectionPoint = vuln.payload || `${vuln.parameter}=*INJECT*`;
-      
-      const context = {
-        targetUrl: vuln.url,
-        vulnerableParameter: vuln.parameter!,
-        dbType: "mysql" as const, // TODO: Auto-detect from vuln.evidence
-        technique: "error-based" as const, // TODO: Detect from vuln.type
-        injectionPoint: injectionPoint,
-        signal: this.abortController.signal,
-        onProgress: async (progress: number, message: string) => {
-          await this.logger.info("Dumper", `[${progress}%] ${message}`);
-        },
-        onLog: async (level: string, message: string) => {
-          await this.logger.info("Dumper", message);
+      // Create integrated pipeline context
+      const pipelineContext = {
+        scanId: this.scanId,
+        targetUrl: this.targetUrl,
+        vulnerabilities: [vuln],
+        enumerationEnabled: true,
+        userConsent: {
+          acknowledgedWarnings: [
+            "I confirm this target is authorized for testing",
+            "I will comply with all legal restrictions",
+            "I am responsible for any consequences",
+            "I will limit data extraction to necessary scope",
+          ],
+          metadata: {
+            ipAddress: "scanner",
+            userAgent: "integrated-scanner",
+          },
         },
       };
       
-      const engine = new DataDumpingEngine(context);
+      const pipeline = new IntegratedPipelineAdapter(pipelineContext);
       
-      // Test database connection
-      const dbInfo = await engine.getCurrentDatabaseInfo();
+      // Step 1: Add vulnerabilities to confirmation gate
+      await pipeline.processVulnerabilities([vuln]);
+      await this.logger.info("Scanner", `📊 Added 1 signal to confirmation gate`);
       
-      if (dbInfo && dbInfo.name && dbInfo.name !== "unknown") {
-        await this.logger.info("Scanner", `✅ Database accessible: ${dbInfo.name}`);
+      // Step 2: Evaluate confirmation
+      const confirmed = await pipeline.evaluateConfirmation();
+      if (confirmed) {
+        await this.logger.info("Scanner", `✅ Confirmation Gate: PASSED`);
         
-        // Start full dump
-        const result = await engine.dumpAll();
-        
-        if (result.success) {
-          await this.logger.info("Scanner", `✅ Dump completed: ${result.databases.length} databases found`);
+        // Step 3: Fingerprint database
+        const fingerprint = await pipeline.fingerprintDatabase();
+        if (fingerprint) {
+          await this.logger.info("Scanner", `🔍 Database: ${fingerprint.type} ${fingerprint.version || ""}`);
+          
+          // Step 4: Enumerate database
+          const enumResults = await pipeline.enumerateDatabase();
+          if (enumResults) {
+            await this.logger.info("Scanner", `📚 Enumeration: Found ${enumResults.databases.length} databases, ${Object.values(enumResults.tables).flat().length} tables`);
+          } else {
+            await this.logger.warn("Scanner", "⏭️ Enumeration skipped or failed");
+          }
         } else {
-          await this.logger.warn("Scanner", `⚠️ Dump failed: ${result.error}`);
+          await this.logger.warn("Scanner", "⚠️ Database fingerprinting failed");
         }
       } else {
-        await this.logger.warn("Scanner", "⚠️ Database not accessible - dump failed");
+        await this.logger.warn("Scanner", "❌ Confirmation Gate: BLOCKED (insufficient confidence)");
       }
       
     } catch (error: any) {
-      await this.logger.error("Scanner", "Auto-dump failed", error);
+      await this.logger.error("Scanner", "Dumper test error", error);
     }
   }
 
@@ -355,21 +441,20 @@ export class VulnerabilityScanner {
       if (vulnToReport.verificationStatus === "confirmed") {
         this.summary.confirmed++;
         
-        // AUTO-DUMP: Start dumping after first confirmed vulnerability
+        // Test in dumper but DON'T start full dump
         if (!this.firstVulnFound && !this.dumpingStarted && vulnToReport.parameter) {
           this.firstVulnFound = true;
           this.dumpingStarted = true;
           
-          await this.logger.info("Scanner", "🎯 First confirmed vulnerability found! Starting auto-dump...");
+          await this.logger.info("Scanner", "🎯 First confirmed vulnerability found! Testing in dumper...");
           
-          // Start dumping in background (don't block scanner)
-          this.startAutoDumping(vulnToReport).catch(err => {
-            this.logger.error("Scanner", "Auto-dump failed", err as Error);
+          // Test in dumper (don't block scanner)
+          this.testInDumper(vulnToReport).catch(err => {
+            this.logger.error("Scanner", "Dumper test failed", err as Error);
           });
           
-          // STOP SCANNER: We found what we need
-          await this.logger.info("Scanner", "✋ Stopping scanner - vulnerability confirmed and dumping started");
-          this.cancel();
+          // DON'T stop scanner - let it continue finding more vulnerabilities
+          await this.logger.info("Scanner", "✅ Continuing scan to find all vulnerabilities...");
         }
       } else if (vulnToReport.verificationStatus === "potential") {
         this.summary.potential++;
@@ -778,8 +863,79 @@ export class VulnerabilityScanner {
       // Phase 2b: Error-based SQL injection
       this.executionController.startPhase("error_based_sql");
       
+      // ⚡ EVENT-DRIVEN TESTING: Use new detector for immediate exploitation
+      await this.logger.info("Scanner", "⚡ [EventDriven] Starting event-driven SQLi detection...");
+      await this.logger.info("Scanner", "[EventDriven] Detection → STOP → Confirm → Exploit IMMEDIATELY");
+      
       await this.executeModule(
-        "SQL Injection",
+        "SQL Injection (Event-Driven)",
+        async () => {
+          // Test each URL with event-driven detector
+          for (const url of urlsToTest) {
+            if (this.cancelled) break;
+            
+            // Extract parameters from URL
+            const urlObj = new URL(url);
+            const parameters = Array.from(urlObj.searchParams.keys());
+            
+            if (parameters.length === 0) {
+              await this.log("info", `[EventDriven] No parameters found in ${url} - skipping`);
+              continue;
+            }
+            
+            await this.log("info", `[EventDriven] Testing ${url} with ${parameters.length} parameters`);
+            
+            // Test each parameter with event-driven approach
+            for (const param of parameters) {
+              if (this.cancelled) break;
+              
+              // Check if we should stop fuzzing this parameter
+              if (this.eventDrivenDetector.shouldStopFuzzing(url, param)) {
+                await this.log("info", `[EventDriven] Parameter ${param} already confirmed - skipping`);
+                continue;
+              }
+              
+              // Establish baseline
+              const baselineResponse = await makeRequest(url, { timeout: 10000 });
+              if (baselineResponse.error) {
+                await this.log("warn", `[EventDriven] Failed to establish baseline for ${url}`);
+                continue;
+              }
+              
+              const baseline = {
+                responseTime: baselineResponse.responseTime,
+                bodyHash: hashString(baselineResponse.body),
+                status: baselineResponse.status,
+                body: baselineResponse.body,
+              };
+              
+              // ⚡ Test parameter with event-driven detection
+              const result = await this.eventDrivenDetector.testParameter(url, param, baseline);
+              
+              if (result.vulnerable && result.context) {
+                await this.log("info", `✅ [EventDriven] SQLi CONFIRMED and EXPLOITED for ${param}`);
+                // Exploitation already happened automatically in handleConfirmationComplete
+              } else {
+                await this.log("info", `[EventDriven] No vulnerability found for ${param}`);
+              }
+              
+              // Mark parameter as tested
+              this.executionController.incrementParametersTested();
+            }
+            
+            // Mark URL as completed
+            this.progressTracker.markCompleted(`url:${url}`);
+          }
+        },
+        this.moduleTimeout
+      );
+      
+      // FALLBACK: Also run traditional SQLi module for comprehensive coverage
+      // This catches anything the event-driven detector might miss
+      await this.logger.info("Scanner", "[Fallback] Running traditional SQLi module for comprehensive coverage...");
+      
+      await this.executeModule(
+        "SQL Injection (Traditional)",
         async () => {
           const sqliModule = new SQLiModule(
             this.targetUrl,
@@ -794,7 +950,6 @@ export class VulnerabilityScanner {
           );
           return sqliModule.scan(urlsToTest);
         },
-        // FIXED: Use realistic timeout instead of MAX_SAFE_TIMEOUT
         this.moduleTimeout
       );
       

@@ -611,6 +611,47 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return updated;
   }
+
+  // Get enumeration results for a scan
+  async getEnumerationResults(scanId: number) {
+    // Get all databases for this scan
+    const databases = await db
+      .select()
+      .from(extractedDatabases)
+      .where(eq(extractedDatabases.scanId, scanId))
+      .orderBy(extractedDatabases.extractedAt);
+
+    // For each database, get tables and columns
+    const results = [];
+    for (const database of databases) {
+      const tables = await db
+        .select()
+        .from(extractedTables)
+        .where(eq(extractedTables.databaseId, database.id))
+        .orderBy(extractedTables.extractedAt);
+
+      const tablesWithColumns = [];
+      for (const table of tables) {
+        const columns = await db
+          .select()
+          .from(extractedColumns)
+          .where(eq(extractedColumns.tableId, table.id))
+          .orderBy(extractedColumns.extractedAt);
+
+        tablesWithColumns.push({
+          ...table,
+          columns,
+        });
+      }
+
+      results.push({
+        ...database,
+        tables: tablesWithColumns,
+      });
+    }
+
+    return results;
+  }
 }
 
 export const storage = new DatabaseStorage();

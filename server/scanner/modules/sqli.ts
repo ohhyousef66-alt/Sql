@@ -9,7 +9,8 @@ import { createHash } from "crypto";
 const AGGRESSIVE_CONCURRENCY = 20;
 const HEAVY_PAYLOAD_MODE = true;
 
-type DatabaseType = "mysql" | "postgresql" | "mssql" | "oracle" | "sqlite" | "unknown";
+// Export DatabaseType for use in other modules
+export type DatabaseType = "mysql" | "postgresql" | "mssql" | "oracle" | "sqlite" | "unknown";
 type ParameterType = "numeric" | "string" | "json" | "header" | "hidden";
 type ReflectionBehavior = "echoed" | "processed" | "ignored";
 type PayloadClass = "error" | "union" | "blind-time" | "blind-boolean" | "stacked";

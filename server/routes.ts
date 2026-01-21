@@ -165,6 +165,20 @@ export async function registerRoutes(
     const children = await storage.getChildScans(parentId);
     res.json(children);
   });
+
+  app.get(api.scans.getEnumerationResults.path, async (req, res) => {
+    try {
+      const scanId = Number(req.params.id);
+      const scan = await storage.getScan(scanId);
+      if (!scan) return res.status(404).json({ message: "Scan not found" });
+      
+      const results = await storage.getEnumerationResults(scanId);
+      res.json(results);
+    } catch (error) {
+      console.error("Failed to get enumeration results:", error);
+      res.status(500).json({ message: "Failed to get enumeration results" });
+    }
+  });
   
   // ============================================
   // Mass-Scan Management API Routes
@@ -917,53 +931,61 @@ export async function registerRoutes(
   // Get mass scan progress
   app.get("/api/mass-scan/progress", async (req, res) => {
     try {
-      // If no active scanner, check if we have saved state
+      // If no active scanner but we have saved ID, get from database
       if (!activeMassScanner && activeMassScanId) {
         const parentScan = await storage.getScan(activeMassScanId);
-        if (parentScan && parentScan.status === "completed") {
+        if (parentScan) {
           const childScans = await storage.getChildScans(activeMassScanId);
-          const vulnerable = childScans.filter(async (s) => {
-            const vulns = await storage.getVulnerabilities(s.id);
-            return vulns.length > 0;
-          }).length;
+          
+          // Count vulnerable targets (with async)
+          let vulnerable = 0;
+          for (const scan of childScans) {
+            const vulns = await storage.getVulnerabilities(scan.id);
+            if (vulns.length > 0) vulnerable++;
+          }
+          
+          const completed = childScans.filter(s => s.status === "completed" || s.status === "failed").length;
+          const scanning = childScans.filter(s => s.status === "scanning").length;
           
           return res.json({
-            running: false,
+            running: parentScan.status === "scanning",
             total: childScans.length,
-            completed: childScans.filter(s => s.status === "completed").length,
-            scanning: 0,
+            completed,
+            scanning,
             vulnerable,
-            clean: childScans.length - vulnerable,
+            clean: completed - vulnerable,
             errors: childScans.filter(s => s.status === "failed").length,
-            progress: 100,
+            progress: childScans.length > 0 ? Math.round((completed / childScans.length) * 100) : 0,
             scanId: activeMassScanId,
           });
         }
       }
       
-      if (!activeMassScanner) {
+      // If active scanner, get live stats
+      if (activeMassScanner) {
+        const stats = activeMassScanner.getStats();
+        const percentComplete = stats.total > 0 
+          ? Math.round(((stats.completed + stats.errors) / stats.total) * 100) 
+          : 0;
+
         return res.json({
-          running: false,
-          total: 0,
-          completed: 0,
-          scanning: 0,
-          vulnerable: 0,
-          clean: 0,
-          errors: 0,
-          progress: 0,
+          running: true,
+          ...stats,
+          progress: percentComplete,
+          scanId: activeMassScanId,
         });
       }
-
-      const stats = activeMassScanner.getStats();
-      const percentComplete = stats.total > 0 
-        ? Math.round(((stats.completed + stats.errors) / stats.total) * 100) 
-        : 0;
-
-      res.json({
-        running: true,
-        ...stats,
-        progress: percentComplete,
-        scanId: activeMassScanId,
+      
+      // No scanner at all
+      return res.json({
+        running: false,
+        total: 0,
+        completed: 0,
+        scanning: 0,
+        vulnerable: 0,
+        clean: 0,
+        errors: 0,
+        progress: 0,
       });
     } catch (error: any) {
       console.error("Progress error:", error);
