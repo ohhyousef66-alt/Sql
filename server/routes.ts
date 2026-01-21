@@ -900,17 +900,18 @@ export async function registerRoutes(
         });
       }
 
-      const progress = activeMassScanner.getProgress();
-      const percentComplete = progress.total > 0 
-        ? Math.round((progress.completed / progress.total) * 100) 
+      const stats = activeMassScanner.getStats();
+      const percentComplete = stats.total > 0 
+        ? Math.round((stats.completed / stats.total) * 100) 
         : 0;
 
       res.json({
         running: true,
-        ...progress,
+        ...stats,
         progress: percentComplete,
       });
     } catch (error: any) {
+      console.error("Progress error:", error);
       res.status(500).json({ message: "Failed to get progress" });
     }
   });
