@@ -1409,9 +1409,9 @@ export async function registerRoutes(
     try {
       const { scanId } = req.query;
       
-      const databases = await storage.getExtractedDatabases(
-        scanId ? parseInt(scanId as string) : undefined
-      );
+      const databases = scanId 
+        ? await storage.getExtractedDatabases(parseInt(scanId as string))
+        : await storage.getExtractedDatabases();
 
       // Get tables for each database
       const result = await Promise.all(
@@ -1432,7 +1432,7 @@ export async function registerRoutes(
               
               return {
                 id: table.id,
-                name: table.name,
+                name: table.tableName,
                 columnCount: columns.length,
                 rowCount,
                 columns: [], // Empty initially, loaded on demand
@@ -1443,7 +1443,7 @@ export async function registerRoutes(
           return {
             id: db.id,
             vulnerabilityId: db.vulnerabilityId,
-            name: db.name,
+            name: db.databaseName,
             tables: tablesWithInfo,
           };
         })
@@ -1466,7 +1466,7 @@ export async function registerRoutes(
       
       // Get table
       const tables = await storage.getExtractedTables(parseInt(dbId));
-      const table = tables.find(t => t.name === tableName);
+      const table = tables.find(t => t.tableName === tableName);
       
       if (!table) {
         return res.status(404).json({ error: "Table not found" });
@@ -1477,12 +1477,12 @@ export async function registerRoutes(
       
       const columnsWithData = await Promise.all(
         columns.map(async (col) => {
-          const data = await storage.getExtractedData(col.id);
+          const data = await storage.getExtractedData(col.tableId);
           return {
             id: col.id,
-            name: col.name,
-            type: col.type,
-            data: data.map(d => d.value),
+            name: col.columnName,
+            type: col.dataType,
+            data: data.map(d => d.rowData),
           };
         })
       );

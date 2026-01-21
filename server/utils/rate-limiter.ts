@@ -140,13 +140,15 @@ export function createRateLimit(options: RateLimitOptions) {
       }
 
       if (handler) {
-        return handler(req, res);
+        handler(req, res);
+        return;
       }
 
-      return res.status(statusCode).json({
+      res.status(statusCode).json({
         message,
         retryAfter: Math.ceil((result.resetTime - Date.now()) / 1000),
       });
+      return;
     }
 
     // Track response to potentially skip counting

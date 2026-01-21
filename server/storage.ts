@@ -487,7 +487,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createExtractedDatabase(data: InsertExtractedDatabase): Promise<ExtractedDatabase> {
-    const [database] = await db.insert(extractedDatabases).values(data).returning();
+    const [database] = await db.insert(extractedDatabases).values({
+      ...data,
+      metadata: data.metadata as any,
+    }).returning();
     return database;
   }
 
@@ -496,11 +499,17 @@ export class DatabaseStorage implements IStorage {
     return database;
   }
 
-  async getExtractedDatabases(vulnerabilityId: number): Promise<ExtractedDatabase[]> {
+  async getExtractedDatabases(vulnerabilityId?: number): Promise<ExtractedDatabase[]> {
+    if (vulnerabilityId) {
+      return await db
+        .select()
+        .from(extractedDatabases)
+        .where(eq(extractedDatabases.vulnerabilityId, vulnerabilityId))
+        .orderBy(desc(extractedDatabases.extractedAt));
+    }
     return await db
       .select()
       .from(extractedDatabases)
-      .where(eq(extractedDatabases.vulnerabilityId, vulnerabilityId))
       .orderBy(desc(extractedDatabases.extractedAt));
   }
 

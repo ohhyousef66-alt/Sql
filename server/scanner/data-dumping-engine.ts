@@ -348,7 +348,7 @@ export class DataDumpingEngine {
         maxRedirects: 5,
       });
       
-      if (!result.success) return null;
+      if (result.error || result.status >= 400) return null;
       
       // Extract value from response using markers
       const match = result.body.match(/~~SQLIDUMPER~~(.+?)~~SQLIDUMPER~~/);
@@ -374,7 +374,7 @@ export class DataDumpingEngine {
         maxRedirects: 5,
       });
       
-      if (!result.success) return null;
+      if (result.error || result.status >= 400) return null;
       
       // Extract from error messages
       const patterns = [
@@ -548,7 +548,7 @@ export class DataDumpingEngine {
     // Compare with baseline to determine if condition is true
     // This should be pre-calibrated with known true/false responses
     // For now, use simple heuristic
-    return result.success && result.status === 200 && result.body.length > 1000;
+    return !result.error && result.status === 200 && result.body.length > 1000;
   }
 
   /**
