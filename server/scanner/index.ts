@@ -427,7 +427,50 @@ export class VulnerabilityScanner {
         });
         return;
       }
+
+      // 🔥 VERIFICATION LOOP: PAUSE REPORTING - TEST WITH DUMPER FIRST
+      if (vulnToReport.verificationStatus === "confirmed" && vulnToReport.parameter) {
+        await this.logger.info("Scanner", `🔬 [Verification Loop] SQLi detected on ${vulnToReport.parameter} - Testing with Dumper BEFORE reporting...`);
+        
+        // Try to extract database name using the dumper
+        const verificationResult = await this.verifyWithDumper(vulnToReport);
+        
+        if (verificationResult.verified) {
+          await this.logger.info("Scanner", `✅ [Verification Loop] VERIFIED - Dumper extracted data: ${verificationResult.extractedData}`);
+          
+          // Update evidence with dumper results
+          vulnToReport.evidence = `${vulnToReport.evidence}\n\n✅ VERIFIED by Dumper: ${verificationResult.extractedData}`;
+          
+          // NOW report as truly verified
+          await storage.createVulnerability({
+            ...vulnToReport,
+            scanId: this.scanId,
+          });
+          
+          this.summary.critical++;
+          this.summary.confirmed++;
+          
+          await this.logger.info("Scanner", `✅ [Verification Loop] Vulnerability REPORTED after successful verification`);
+          
+          // 🛑 STOP-ON-SUCCESS: This target is pwned, stop scanning it
+          await this.logger.info("Scanner", `🛑 [Stop-on-Success] Target ${vulnToReport.url} is verified vulnerable - STOPPING scan for this target`);
+          this.cancelled = true; // Stop the entire scan since we only scan one target at a time
+          
+          return;
+        } else {
+          // Dumper failed to verify - DISCARD the result
+          await this.logger.warn("Scanner", `❌ [Verification Loop] DISCARDED - Dumper could not verify: ${verificationResult.reason}`);
+          await this.logger.debug("Scanner", `False positive suppressed - no data extraction possible`, {
+            url: vulnToReport.url,
+            parameter: vulnToReport.parameter,
+            decision: "discarded_unverified",
+            reason: verificationResult.reason,
+          });
+          return; // Do NOT report this vulnerability
+        }
+      }
       
+      // For non-confirmed or no-parameter findings, report as-is (edge case)
       await storage.createVulnerability({
         ...vulnToReport,
         scanId: this.scanId,
@@ -438,25 +481,7 @@ export class VulnerabilityScanner {
         (this.summary as any)[severity]++;
       }
 
-      if (vulnToReport.verificationStatus === "confirmed") {
-        this.summary.confirmed++;
-        
-        // Test in dumper but DON'T start full dump
-        if (!this.firstVulnFound && !this.dumpingStarted && vulnToReport.parameter) {
-          this.firstVulnFound = true;
-          this.dumpingStarted = true;
-          
-          await this.logger.info("Scanner", "🎯 First confirmed vulnerability found! Testing in dumper...");
-          
-          // Test in dumper (don't block scanner)
-          this.testInDumper(vulnToReport).catch(err => {
-            this.logger.error("Scanner", "Dumper test failed", err as Error);
-          });
-          
-          // DON'T stop scanner - let it continue finding more vulnerabilities
-          await this.logger.info("Scanner", "✅ Continuing scan to find all vulnerabilities...");
-        }
-      } else if (vulnToReport.verificationStatus === "potential") {
+      if (vulnToReport.verificationStatus === "potential") {
         this.summary.potential++;
       }
 
@@ -473,6 +498,96 @@ export class VulnerabilityScanner {
         parameter: vuln.parameter || undefined,
       });
     }
+  }
+
+  /**
+   * 🔥 VERIFICATION LOOP: Use Dumper to verify SQLi before reporting
+   * This is the core of the "Scan-then-Verify" protocol
+   */
+  private async verifyWithDumper(vuln: Omit<InsertVulnerability, "scanId">): Promise<{
+    verified: boolean;
+    extractedData?: string;
+    reason?: string;
+  }> {
+    try {
+      await this.logger.info("Scanner", `🔍 [Dumper Verification] Attempting to extract database name...`);
+      
+      // Import DataDumpingEngine
+      const { DataDumpingEngine } = await import("./data-dumping-engine");
+      
+      // Detect DB type from evidence
+      const dbType = this.detectDbTypeFromEvidence(vuln.evidence || "");
+      
+      // Detect technique from vulnerability type
+      const technique = this.detectTechniqueFromType(vuln.type);
+      
+      // Create dumping context
+      const dumpingContext = {
+        targetUrl: vuln.url || this.targetUrl,
+        vulnerableParameter: vuln.parameter || "",
+        dbType,
+        technique,
+        injectionPoint: vuln.payload || "",
+        signal: this.abortController.signal,
+        onProgress: (progress: number, message: string) => {
+          this.logger.debug("Scanner", `[Dumper] ${message} (${progress}%)`);
+        },
+        onLog: async (level: string, message: string) => {
+          await this.logger.debug("Scanner", `[Dumper] ${message}`);
+        },
+      };
+      
+      // Create dumper instance
+      const dumper = new DataDumpingEngine(dumpingContext);
+      
+      // Try to extract current database info (lightweight test)
+      const dbInfo = await dumper.getCurrentDatabaseInfo();
+      
+      if (dbInfo && dbInfo.currentDb && dbInfo.currentDb !== "unknown") {
+        // SUCCESS: Dumper extracted database name
+        return {
+          verified: true,
+          extractedData: `Database: ${dbInfo.currentDb}${dbInfo.version ? `, Version: ${dbInfo.version}` : ""}${dbInfo.user ? `, User: ${dbInfo.user}` : ""}`,
+        };
+      } else {
+        // FAILURE: Dumper could not extract data
+        return {
+          verified: false,
+          reason: "Dumper could not extract database name - likely false positive",
+        };
+      }
+    } catch (error: any) {
+      await this.logger.error("Scanner", `[Dumper Verification] Failed: ${error.message}`);
+      return {
+        verified: false,
+        reason: `Dumper error: ${error.message}`,
+      };
+    }
+  }
+  
+  /**
+   * Helper: Detect database type from evidence string
+   */
+  private detectDbTypeFromEvidence(evidence: string): "mysql" | "postgresql" | "mssql" | "oracle" | "sqlite" {
+    const e = evidence.toLowerCase();
+    if (e.includes("mysql") || e.includes("mariadb")) return "mysql";
+    if (e.includes("postgresql") || e.includes("postgres")) return "postgresql";
+    if (e.includes("mssql") || e.includes("microsoft sql") || e.includes("sql server")) return "mssql";
+    if (e.includes("oracle")) return "oracle";
+    if (e.includes("sqlite")) return "sqlite";
+    return "mysql"; // default
+  }
+  
+  /**
+   * Helper: Detect extraction technique from vulnerability type
+   */
+  private detectTechniqueFromType(type: string): "error-based" | "union-based" | "boolean-based" | "time-based" {
+    const t = type.toLowerCase();
+    if (t.includes("error")) return "error-based";
+    if (t.includes("union")) return "union-based";
+    if (t.includes("boolean")) return "boolean-based";
+    if (t.includes("time") || t.includes("blind")) return "time-based";
+    return "error-based"; // default
   }
 
   private async runWithTimeout<T>(

@@ -4,13 +4,10 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { VulnerabilityScanner } from "./scanner/index";
-import { StageExecutor } from "./scanner/stage-executor";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import PDFDocument from "pdfkit";
 import { spawn } from "child_process";
 import fs from "fs";
-
-const activeStageExecutors = new Map<number, StageExecutor>();
 
 export async function registerRoutes(
   httpServer: Server,
@@ -42,10 +39,23 @@ export async function registerRoutes(
     }
   });
 
+  // FIX #1: Session Persistence - Return full scan state with all metrics
   app.get(api.scans.get.path, async (req, res) => {
-    const scan = await storage.getScan(Number(req.params.id));
-    if (!scan) return res.status(404).json({ message: "Scan not found" });
-    res.json(scan);
+    try {
+      const scanId = Number(req.params.id);
+      const scan = await storage.getScan(scanId);
+      if (!scan) return res.status(404).json({ message: "Scan not found" });
+      
+      // Include all necessary fields for session recovery
+      res.json({
+        ...scan,
+        progressMetrics: scan.progressMetrics || {},
+        resumable: scan.status === "scanning" || scan.status === "pending",
+      });
+    } catch (error) {
+      console.error("Get scan error:", error);
+      res.status(500).json({ message: "Failed to get scan" });
+    }
   });
 
   app.get(api.scans.getVulnerabilities.path, async (req, res) => {
@@ -97,19 +107,36 @@ export async function registerRoutes(
     }
   });
 
+  // ============================================
+  // UNIFIED BATCH SCANNING - Same Engine, Just Queued
+  // ============================================
   app.post(api.scans.batch.path, async (req, res) => {
     try {
       const input = api.scans.batch.input.parse(req.body);
       const { targetUrls, threads } = input;
       
+      // Create parent scan for tracking
       const parentScan = await storage.createBatchParentScan(targetUrls, "sqli");
       const childScanIds: number[] = [];
       
+      await storage.createScanLog({
+        scanId: parentScan.id,
+        level: "info",
+        message: `🚀 Unified Batch Scan: Queuing ${targetUrls.length} targets through the SAME scanning engine`,
+      });
+      
+      // Queue each URL through the UNIFIED scanner (same quality, no "lite" mode)
       for (const targetUrl of targetUrls) {
         const childScan = await storage.createChildScan(parentScan.id, targetUrl, "sqli");
         childScanIds.push(childScan.id);
         
-        // Start child scan - run() already registers in activeScans internally
+        await storage.createScanLog({
+          scanId: childScan.id,
+          level: "info",
+          message: `⚙️ [Quality Assurance] Using FULL scanning engine with ALL payloads - same depth as single URL scan`,
+        });
+        
+        // Start child scan with the UNIFIED engine (identical to single scan)
         const scanner = new VulnerabilityScanner(
           childScan.id, 
           childScan.targetUrl, 
@@ -117,11 +144,10 @@ export async function registerRoutes(
           threads ?? 10
         );
         
-        // Immediately mark child as scanning before run() starts
+        // Mark as scanning and run
         storage.updateScan(childScan.id, { status: "scanning", progress: 1 })
           .then(() => {
-            // Run scanner with proper error handling
-            return scanner.run();
+            return scanner.run(); // SAME engine as single scan - NO shortcuts
           })
           .catch(async (error) => {
             console.error(`Child scan ${childScan.id} failed:`, error);
@@ -180,365 +206,6 @@ export async function registerRoutes(
     }
   });
   
-  // ============================================
-  // Mass-Scan Management API Routes
-  // ============================================
-
-  // Helper: Validate URL format
-  function isValidUrl(url: string): boolean {
-    try {
-      const parsed = new URL(url.trim());
-      return ['http:', 'https:'].includes(parsed.protocol);
-    } catch {
-      return false;
-    }
-  }
-
-  // Upload file with URL list
-  app.post(api.massScan.uploadFile.path, async (req, res) => {
-    try {
-      const input = api.massScan.uploadFile.input.parse(req.body);
-      const { filename, content } = input;
-      
-      // Parse URLs from content (supports txt and csv)
-      const lines = content.split(/[\r\n]+/).filter(line => line.trim());
-      const validUrls: string[] = [];
-      const errors: string[] = [];
-      
-      for (const line of lines) {
-        const url = line.trim().split(',')[0].trim(); // First column for CSV
-        if (!url || url.startsWith('#')) continue; // Skip empty and comments
-        
-        if (isValidUrl(url)) {
-          validUrls.push(url);
-        } else {
-          errors.push(`Invalid URL: ${url.substring(0, 50)}${url.length > 50 ? '...' : ''}`);
-        }
-      }
-      
-      if (validUrls.length === 0) {
-        return res.status(400).json({ message: "No valid URLs found in file" });
-      }
-      
-      // Create file record
-      const file = await storage.createUploadedFile({
-        filename,
-        totalUrls: validUrls.length + errors.length,
-        validUrls: validUrls.length,
-        invalidUrls: errors.length,
-        currentStage: 0,
-        status: "pending",
-      });
-      
-      // Create staged targets for all valid URLs (bulk insert)
-      const stagedTargetData = validUrls.map(url => ({
-        fileId: file.id,
-        url,
-        currentStage: 0,
-        status: "pending" as const,
-        isAnomaly: false,
-      }));
-      
-      await storage.createStagedTargets(stagedTargetData);
-      
-      res.status(201).json({
-        file,
-        validUrls: validUrls.length,
-        invalidUrls: errors.length,
-        errors: errors.slice(0, 10), // Return first 10 errors
-      });
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        return res.status(400).json({ message: err.errors[0].message });
-      }
-      console.error("File upload error:", err);
-      res.status(500).json({ message: "Failed to upload file" });
-    }
-  });
-
-  // Get all uploaded files
-  app.get(api.massScan.getFiles.path, async (req, res) => {
-    const files = await storage.getUploadedFiles();
-    res.json(files);
-  });
-
-  // Get single file with targets and stage runs
-  app.get(api.massScan.getFile.path, async (req, res) => {
-    const fileId = Number(req.params.id);
-    const file = await storage.getUploadedFile(fileId);
-    if (!file) return res.status(404).json({ message: "File not found" });
-    
-    const targets = await storage.getStagedTargetsByFile(fileId);
-    const runs = await storage.getStageRunsByFile(fileId);
-    res.json({ file, targets, stageRuns: runs });
-  });
-
-  // Delete uploaded file and its targets
-  app.delete(api.massScan.deleteFile.path, async (req, res) => {
-    const fileId = Number(req.params.id);
-    const file = await storage.getUploadedFile(fileId);
-    if (!file) return res.status(404).json({ message: "File not found" });
-    
-    await storage.deleteUploadedFile(fileId);
-    res.json({ success: true });
-  });
-
-  // Get stage runs for a file
-  app.get(api.massScan.getStageRuns.path, async (req, res) => {
-    const fileId = Number(req.params.id);
-    const file = await storage.getUploadedFile(fileId);
-    if (!file) return res.status(404).json({ message: "File not found" });
-    
-    const runs = await storage.getStageRunsByFile(fileId);
-    res.json(runs);
-  });
-
-  // Get all flagged targets (anomalies)
-  app.get(api.massScan.getFlaggedTargets.path, async (req, res) => {
-    const fileId = req.query.fileId ? Number(req.query.fileId) : undefined;
-    const flaggedTargets = await storage.getFlaggedTargets(fileId);
-    res.json(flaggedTargets);
-  });
-
-  // Export targets as text file
-  app.get(api.massScan.exportTargets.path, async (req, res) => {
-    try {
-      const fileId = Number(req.params.id);
-      const file = await storage.getUploadedFile(fileId);
-      if (!file) return res.status(404).json({ message: "File not found" });
-      
-      const stage = req.query.stage ? Number(req.query.stage) : undefined;
-      const onlyFlagged = req.query.flagged === 'true';
-      
-      let targets;
-      if (onlyFlagged) {
-        targets = await storage.getFlaggedTargets(fileId);
-      } else if (stage !== undefined) {
-        targets = await storage.getStagedTargetsByFileAndStage(fileId, stage);
-      } else {
-        targets = await storage.getStagedTargetsByFile(fileId);
-      }
-      
-      const content = targets.map(t => t.url).join('\n');
-      
-      res.setHeader('Content-Type', 'text/plain');
-      res.setHeader('Content-Disposition', `attachment; filename=${file.filename}-export.txt`);
-      res.send(content);
-    } catch (err) {
-      console.error("Export error:", err);
-      res.status(500).json({ message: "Failed to export targets" });
-    }
-  });
-
-  // Promote targets to next stage
-  app.post(api.massScan.promoteTargets.path, async (req, res) => {
-    try {
-      const fileId = Number(req.params.id);
-      const file = await storage.getUploadedFile(fileId);
-      if (!file) return res.status(404).json({ message: "File not found" });
-      
-      const input = api.massScan.promoteTargets.input.parse(req.body);
-      const { targetIds, toStage } = input;
-      
-      let promotedCount = 0;
-      for (const targetId of targetIds) {
-        await storage.updateStagedTarget(targetId, { 
-          currentStage: toStage - 1, // Ready for next stage
-          status: "pending",
-        });
-        promotedCount++;
-      }
-      
-      res.json({ promoted: promotedCount });
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        return res.status(400).json({ message: err.errors[0].message });
-      }
-      res.status(500).json({ message: "Failed to promote targets" });
-    }
-  });
-
-  // Run stage with StageExecutor
-  app.post(api.massScan.runStage.path, async (req, res) => {
-    try {
-      const fileId = Number(req.params.id);
-      const file = await storage.getUploadedFile(fileId);
-      if (!file) return res.status(404).json({ message: "File not found" });
-      
-      const input = api.massScan.runStage.input.parse(req.body);
-      const { stageNumber, threads, targetIds } = input;
-      
-      // Get targets ready for this stage
-      const targets = await storage.getStagedTargetsByFile(fileId);
-      let eligibleTargets = targets.filter(t => 
-        t.currentStage === stageNumber - 1 && t.status === "pending"
-      );
-      
-      // Filter by targetIds if provided (Issue 1 fix)
-      if (targetIds && targetIds.length > 0) {
-        const targetIdSet = new Set(targetIds);
-        eligibleTargets = eligibleTargets.filter(t => targetIdSet.has(t.id));
-        
-        if (eligibleTargets.length === 0) {
-          return res.status(400).json({ 
-            message: "None of the specified targets are ready for this stage" 
-          });
-        }
-      }
-      
-      if (eligibleTargets.length === 0) {
-        return res.status(400).json({ message: "No targets ready for this stage" });
-      }
-      
-      // Enable zeroSpeedMode for stages 4 and 5
-      const zeroSpeedMode = stageNumber >= 4;
-      
-      // Create stage run record
-      const stageRun = await storage.createStageRun({
-        fileId,
-        stageNumber,
-        status: "pending",
-        totalTargets: eligibleTargets.length,
-        processedTargets: 0,
-        flaggedTargets: 0,
-        confirmedVulns: 0,
-        threads,
-        zeroSpeedMode,
-      });
-      
-      // Update file status to processing (don't touch currentStage - only update on completion)
-      await storage.updateUploadedFile(fileId, { 
-        status: "processing" 
-      });
-      
-      // Update stage run to running
-      await storage.updateStageRun(stageRun.id, { 
-        status: "running", 
-        startedAt: new Date() 
-      });
-      
-      // Create and run stage executor in background
-      const executor = new StageExecutor();
-      activeStageExecutors.set(stageRun.id, executor);
-      
-      const targetUrls = eligibleTargets.map(t => t.url);
-      
-      // Run asynchronously
-      executor.executeStage(fileId, stageNumber, targetUrls, async (progress) => {
-        // Update stage run progress
-        await storage.updateStageRun(stageRun.id, {
-          processedTargets: progress.processedTargets,
-          flaggedTargets: progress.flaggedTargets,
-          confirmedVulns: progress.confirmedVulns,
-        });
-      }).then(async (result) => {
-        // Stage completed
-        console.log(`[MassScan] Stage ${stageNumber} completed for file ${fileId}: ${result.processedCount} processed, ${result.flaggedCount} flagged`);
-        
-        await storage.updateStageRun(stageRun.id, {
-          status: "completed",
-          completedAt: new Date(),
-          processedTargets: result.processedCount,
-          flaggedTargets: result.flaggedCount,
-          confirmedVulns: result.confirmedVulns,
-        });
-        
-        // Get current file state and updated targets
-        const currentFile = await storage.getUploadedFile(fileId);
-        const updatedTargets = await storage.getStagedTargetsByFile(fileId);
-        
-        // Check if all targets have completed the final stage (stage 5)
-        const allCompletedFinalStage = updatedTargets.every(t => 
-          t.currentStage >= 5 || t.status === "flagged"
-        );
-        
-        // Only update currentStage if we actually processed targets AND this stage is higher than current
-        const shouldUpdateStage = result.processedCount > 0 && 
-          (!currentFile || stageNumber > (currentFile.currentStage || 0));
-        
-        // Calculate statistics for logging (condensed)
-        const targetsByStage = updatedTargets.reduce((acc, t) => {
-          acc[t.currentStage] = (acc[t.currentStage] || 0) + 1;
-          return acc;
-        }, {} as Record<number, number>);
-        console.log(`[MassScan] File ${fileId} targets by stage:`, JSON.stringify(targetsByStage));
-        
-        if (allCompletedFinalStage) {
-          // All done - mark completed
-          await storage.updateUploadedFile(fileId, { status: "completed", currentStage: 5 });
-        } else if (currentFile?.status !== "completed") {
-          // Stage finished - set to "pending" (ready for next stage) not "processing" (actively running)
-          // Only update currentStage if we actually processed targets AND this is a new high-water mark
-          const updates: { status?: string; currentStage?: number } = { status: "pending" };
-          if (shouldUpdateStage) {
-            updates.currentStage = stageNumber;
-          }
-          await storage.updateUploadedFile(fileId, updates);
-        }
-        
-        activeStageExecutors.delete(stageRun.id);
-      }).catch(async (error) => {
-        console.error(`Stage ${stageNumber} failed:`, error);
-        await storage.updateStageRun(stageRun.id, {
-          status: "failed",
-          completedAt: new Date(),
-        });
-        await storage.updateUploadedFile(fileId, { status: "failed" });
-        activeStageExecutors.delete(stageRun.id);
-      });
-      
-      res.status(201).json(stageRun);
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        return res.status(400).json({ message: err.errors[0].message });
-      }
-      console.error("Stage run error:", err);
-      res.status(500).json({ message: "Failed to start stage run" });
-    }
-  });
-
-  // Stop stage run
-  app.post(api.massScan.stopStage.path, async (req, res) => {
-    try {
-      const runId = Number(req.params.runId);
-      const run = await storage.getStageRun(runId);
-      if (!run) return res.status(404).json({ message: "Stage run not found" });
-      
-      // Guard: Only stop if the run is actually in progress (running or pending)
-      if (run.status !== "running" && run.status !== "pending") {
-        // Run already completed/failed/stopped - return current state without changes
-        return res.json(run);
-      }
-      
-      // Cancel the executor if it's running
-      const executor = activeStageExecutors.get(runId);
-      if (executor) {
-        executor.cancel();
-        activeStageExecutors.delete(runId);
-      }
-      
-      const updatedRun = await storage.updateStageRun(runId, { 
-        status: "stopped", 
-        completedAt: new Date() 
-      });
-      
-      // Only reset file status if it's currently "processing"
-      const file = await storage.getUploadedFile(run.fileId);
-      if (file && file.status === "processing") {
-        await storage.updateUploadedFile(run.fileId, { status: "pending" });
-        console.log(`[MassScan] Stage ${run.stageNumber} stopped for file ${run.fileId}`);
-      }
-      
-      res.json(updatedRun);
-    } catch (err) {
-      res.status(500).json({ message: "Failed to stop stage run" });
-    }
-  });
-
-  // ============================================
-  // End Mass-Scan Management API Routes
-  // ============================================
-
   app.get(api.scans.export.path, async (req, res) => {
     try {
       const scanId = Number(req.params.id);
@@ -904,14 +571,30 @@ export async function registerRoutes(
         id: scan.id,
       }));
 
-      // Start scanning in background
-      scanner.scanBatch(scanTargets).then(() => {
+      // FIX #2: Progress - Start scanning with progress callback for DB updates
+      scanner.scanBatch(scanTargets, async (completed: number, total: number, result?: any) => {
+        // FIX #2: Progress - Update parent scan progress in DB in real-time
+        const progress = Math.round((completed / total) * 100);
+        await storage.updateScan(parentScan.id, {
+          progress,
+        }).catch(e => console.error("Failed to update mass scan progress:", e));
+      }).then(() => {
         console.log(`[Mass Scan] Complete`);
         storage.updateScan(parentScan.id, {
           status: "completed",
           progress: 100,
           endTime: new Date(),
-        });
+        }).catch(e => console.error("Failed to mark mass scan complete:", e));
+        activeMassScanner = null;
+        activeMassScanId = null;
+      }).catch((error) => {
+        console.error("[Mass Scan] Failed:", error);
+        storage.updateScan(parentScan.id, {
+          status: "failed",
+          progress: 100,
+          endTime: new Date(),
+          completionReason: `Mass scan failed: ${error.message}`,
+        }).catch(e => console.error("Failed to mark mass scan failed:", e));
         activeMassScanner = null;
         activeMassScanId = null;
       });
@@ -929,6 +612,7 @@ export async function registerRoutes(
   });
 
   // Get mass scan progress
+  // FIX #2: Progress - Ensure progress persists across server restarts from DB
   app.get("/api/mass-scan/progress", async (req, res) => {
     try {
       // If no active scanner but we have saved ID, get from database
@@ -937,15 +621,24 @@ export async function registerRoutes(
         if (parentScan) {
           const childScans = await storage.getChildScans(activeMassScanId);
           
-          // Count vulnerable targets (with async)
+          // Efficiently count without N+1 queries - use cached vulnerable count
+          let completed = 0;
+          let scanning = 0;
+          let failed = 0;
           let vulnerable = 0;
-          for (const scan of childScans) {
-            const vulns = await storage.getVulnerabilities(scan.id);
-            if (vulns.length > 0) vulnerable++;
-          }
           
-          const completed = childScans.filter(s => s.status === "completed" || s.status === "failed").length;
-          const scanning = childScans.filter(s => s.status === "scanning").length;
+          for (const scan of childScans) {
+            if (scan.status === "completed") {
+              completed++;
+              // Use cached summary instead of querying vulnerabilities
+              if (scan.summary?.confirmed > 0) vulnerable++;
+            } else if (scan.status === "scanning") {
+              scanning++;
+            } else if (scan.status === "failed") {
+              completed++;
+              failed++;
+            }
+          }
           
           return res.json({
             running: parentScan.status === "scanning",
@@ -953,17 +646,26 @@ export async function registerRoutes(
             completed,
             scanning,
             vulnerable,
-            clean: completed - vulnerable,
-            errors: childScans.filter(s => s.status === "failed").length,
+            clean: (completed - failed) - vulnerable,
+            errors: failed,
             progress: childScans.length > 0 ? Math.round((completed / childScans.length) * 100) : 0,
             scanId: activeMassScanId,
+            persistedFromDb: true,
           });
         }
       }
       
       // If active scanner, get live stats
       if (activeMassScanner) {
-        const stats = activeMassScanner.getStats();
+        // FIX #2: Progress - Add stats method if missing
+        const getStats = () => {
+          return {
+            total: activeMassScanner.queue.length + activeMassScanner.results.size,
+            completed: activeMassScanner.results.size,
+            errors: Array.from(activeMassScanner.results.values()).filter(r => r.status === "error").length,
+          };
+        };
+        const stats = activeMassScanner.getStats?.() || getStats();
         const percentComplete = stats.total > 0 
           ? Math.round(((stats.completed + stats.errors) / stats.total) * 100) 
           : 0;
@@ -1181,7 +883,7 @@ export async function registerRoutes(
     }
   });
 
-  // Dump tables from a database
+  // Dump tables from a database - LINKED TO UNION/ERROR EXTRACTION ENGINES
   app.post("/api/databases/:id/dump-tables", async (req, res) => {
     try {
       const dbId = Number(req.params.id);
@@ -1196,7 +898,7 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Invalid vulnerability" });
       }
       
-      // Create dumping job
+      // Create dumping job with status tracking
       const job = await storage.createDumpingJob({
         vulnerabilityId: database.vulnerabilityId,
         scanId: database.scanId,
@@ -1207,50 +909,105 @@ export async function registerRoutes(
         progress: 0,
       });
       
-      // Start table enumeration
+      await storage.updateDumpingJob(job.id, { startedAt: new Date() });
+      
+      // Start table enumeration using DataDumpingEngine
       const { DataDumpingEngine } = await import("./scanner/data-dumping-engine");
       const abortController = new AbortController();
       
+      // Create engine with proper configuration
       const engine = new DataDumpingEngine({
         targetUrl: database.targetUrl,
         vulnerableParameter: vuln.parameter,
         dbType: database.dbType as any,
-        technique: database.extractionMethod as any,
+        technique: database.extractionMethod as any, // error-based or union-based
         injectionPoint: vuln.payload || "1",
         signal: abortController.signal,
         onProgress: async (progress, message) => {
           await storage.updateDumpingJob(job.id, { progress });
+          console.log(`[Dump Tables Job ${job.id}] ${progress}% - ${message}`);
+        },
+        onLog: async (level, message) => {
+          console.log(`[Dump Tables Job ${job.id}] [${level}] ${message}`);
         },
       });
       
-      engine.enumerateTables(database.databaseName).then(async (tables) => {
-        // Save tables
-        for (const table of tables) {
-          await storage.createExtractedTable({
-            databaseId: dbId,
-            tableName: table.name,
-            status: "discovered",
+      // Run enumeration in background
+      engine.enumerateTables(database.databaseName)
+        .then(async (tables) => {
+          try {
+            // Validate extracted tables
+            if (!tables || tables.length === 0) {
+              await storage.updateDumpingJob(job.id, {
+                status: "completed",
+                progress: 100,
+                itemsTotal: 0,
+                itemsExtracted: 0,
+                completedAt: new Date(),
+              });
+              console.log(`[Dump Tables Job ${job.id}] No tables found`);
+              return;
+            }
+
+            // Save tables to database
+            let savedCount = 0;
+            for (const table of tables) {
+              try {
+                await storage.createExtractedTable({
+                  databaseId: dbId,
+                  tableName: table.name,
+                  rowCount: 0,
+                  columnCount: 0,
+                  status: "discovered",
+                });
+                savedCount++;
+              } catch (err: any) {
+                console.error(`[Dump Tables] Error saving table ${table.name}:`, err.message);
+              }
+            }
+            
+            // Update database record
+            await storage.updateExtractedDatabase(dbId, {
+              tableCount: savedCount,
+              status: "discovered", // Mark as discovered, not completed
+            });
+            
+            // Complete job
+            await storage.updateDumpingJob(job.id, {
+              status: "completed",
+              progress: 100,
+              itemsTotal: tables.length,
+              itemsExtracted: savedCount,
+              completedAt: new Date(),
+            });
+            
+            console.log(`[Dump Tables Job ${job.id}] Completed: ${savedCount}/${tables.length} tables saved`);
+          } catch (err: any) {
+            console.error(`[Dump Tables] Error processing results:`, err);
+            await storage.updateDumpingJob(job.id, {
+              status: "failed",
+              errorMessage: err.message,
+              completedAt: new Date(),
+            });
+          }
+        })
+        .catch(async (error: any) => {
+          console.error(`[Dump Tables Job ${job.id}] Enumeration error:`, error);
+          await storage.updateDumpingJob(job.id, {
+            status: "failed",
+            errorMessage: error.message || "Enumeration failed",
+            completedAt: new Date(),
           });
-        }
-        
-        await storage.updateExtractedDatabase(dbId, {
-          tableCount: tables.length,
-          status: "completed",
         });
-        
-        await storage.updateDumpingJob(job.id, {
-          status: "completed",
-          progress: 100,
-          itemsTotal: tables.length,
-          itemsExtracted: tables.length,
-          completedAt: new Date(),
-        });
-      });
       
-      res.json({ job, message: "Table dumping started" });
+      res.json({ 
+        job, 
+        message: "Table enumeration started using configured extraction engine",
+        extractionTechnique: database.extractionMethod,
+      });
     } catch (error: any) {
       console.error("Dump tables error:", error);
-      res.status(500).json({ message: "Failed to dump tables" });
+      res.status(500).json({ message: `Failed to dump tables: ${error.message}` });
     }
   });
 
@@ -1360,7 +1117,7 @@ export async function registerRoutes(
     }
   });
 
-  // Dump data from a table
+  // Dump data from a table - USES ERROR/UNION EXTRACTION WITH REGEX PARSING
   app.post("/api/tables/:id/dump-data", async (req, res) => {
     try {
       const tableId = Number(req.params.id);
@@ -1388,7 +1145,7 @@ export async function registerRoutes(
         return res.status(400).json({ message: "No columns found. Please dump columns first." });
       }
       
-      // Create dumping job
+      // Create dumping job with Railway DATABASE_URL persistence
       const job = await storage.createDumpingJob({
         vulnerabilityId: database.vulnerabilityId,
         scanId: database.scanId,
@@ -1400,50 +1157,110 @@ export async function registerRoutes(
         itemsTotal: limit,
       });
       
-      // Start data extraction
+      await storage.updateDumpingJob(job.id, { startedAt: new Date() });
+      
+      // Start data extraction using Union/Error engines
       const { DataDumpingEngine } = await import("./scanner/data-dumping-engine");
       const abortController = new AbortController();
       
+      // Engine configuration with proper extraction technique
       const engine = new DataDumpingEngine({
         targetUrl: database.targetUrl,
         vulnerableParameter: vuln.parameter,
         dbType: database.dbType as any,
-        technique: database.extractionMethod as any,
+        technique: database.extractionMethod as any, // error-based or union-based
         injectionPoint: vuln.payload || "1",
         signal: abortController.signal,
         onProgress: async (progress, message) => {
           await storage.updateDumpingJob(job.id, { progress });
+          console.log(`[Dump Data Job ${job.id}] ${progress}% - ${message}`);
+        },
+        onLog: async (level, message) => {
+          console.log(`[Dump Data Job ${job.id}] [${level}] ${message}`);
         },
       });
       
+      // Extract data in background with DATABASE_URL persistence
       engine.extractTableData(database.databaseName, table.tableName, columnNames, limit)
         .then(async (rows) => {
-          // Save data
-          for (let i = 0; i < rows.length; i++) {
-            await storage.createExtractedData({
-              tableId,
-              rowIndex: i,
-              rowData: rows[i],
+          try {
+            if (!rows || rows.length === 0) {
+              await storage.updateDumpingJob(job.id, {
+                status: "completed",
+                progress: 100,
+                itemsExtracted: 0,
+                completedAt: new Date(),
+              });
+              console.log(`[Dump Data Job ${job.id}] No data extracted`);
+              return;
+            }
+
+            // Save extracted rows to DATABASE_URL (via storage layer)
+            let savedCount = 0;
+            for (let i = 0; i < rows.length; i++) {
+              try {
+                await storage.createExtractedData({
+                  tableId,
+                  rowIndex: i,
+                  rowData: rows[i],
+                });
+                savedCount++;
+              } catch (err: any) {
+                console.error(`[Dump Data] Error saving row ${i}:`, err.message);
+              }
+              
+              // Update progress every 10 rows
+              if ((i + 1) % 10 === 0) {
+                await storage.updateDumpingJob(job.id, {
+                  progress: Math.round(((i + 1) / rows.length) * 100),
+                  itemsExtracted: savedCount,
+                });
+              }
+            }
+            
+            // Update table metadata
+            await storage.updateExtractedTable(tableId, {
+              rowCount: savedCount,
+              status: "completed",
+            });
+            
+            // Complete job
+            await storage.updateDumpingJob(job.id, {
+              status: "completed",
+              progress: 100,
+              itemsExtracted: savedCount,
+              completedAt: new Date(),
+            });
+            
+            console.log(`[Dump Data Job ${job.id}] Completed: ${savedCount} rows saved to DATABASE_URL`);
+          } catch (err: any) {
+            console.error(`[Dump Data] Error processing/persisting results:`, err);
+            await storage.updateDumpingJob(job.id, {
+              status: "failed",
+              errorMessage: `Data persistence error: ${err.message}`,
+              completedAt: new Date(),
             });
           }
-          
-          await storage.updateExtractedTable(tableId, {
-            rowCount: rows.length,
-            status: "completed",
-          });
-          
+        })
+        .catch(async (error: any) => {
+          console.error(`[Dump Data Job ${job.id}] Extraction error:`, error);
           await storage.updateDumpingJob(job.id, {
-            status: "completed",
-            progress: 100,
-            itemsExtracted: rows.length,
+            status: "failed",
+            errorMessage: error.message || "Data extraction failed",
             completedAt: new Date(),
           });
         });
       
-      res.json({ job, message: "Data dumping started" });
+      res.json({ 
+        job, 
+        message: `Data extraction started for ${table.tableName} with ${database.extractionMethod} technique`,
+        technique: database.extractionMethod,
+        columns: columnNames.length,
+        targetRows: limit,
+      });
     } catch (error: any) {
       console.error("Dump data error:", error);
-      res.status(500).json({ message: "Failed to dump data" });
+      res.status(500).json({ message: `Failed to dump data: ${error.message}` });
     }
   });
 
@@ -1528,7 +1345,7 @@ export async function registerRoutes(
               // Estimate row count (get max from any column's data length)
               let rowCount = 0;
               for (const col of columns) {
-                const data = await storage.getExtractedData(col.id);
+                const data = await storage.getExtractedData(table.id);
                 rowCount = Math.max(rowCount, data.length);
               }
               
@@ -1579,7 +1396,7 @@ export async function registerRoutes(
       
       const columnsWithData = await Promise.all(
         columns.map(async (col) => {
-          const data = await storage.getExtractedData(col.tableId);
+          const data = await storage.getExtractedData(table.id);
           return {
             id: col.id,
             name: col.columnName,

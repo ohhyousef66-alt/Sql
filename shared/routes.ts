@@ -83,7 +83,7 @@ export const api = {
       method: "POST" as const,
       path: "/api/scans/batch",
       input: z.object({
-        targetUrls: z.array(z.string().url()).min(1).max(50),
+        targetUrls: z.array(z.string().url()).min(1).max(50000), // Support up to 50k URLs
         scanMode: z.enum(["sqli"]).default("sqli"),
         threads: z.number().min(1).max(50).default(10),
       }),
@@ -129,112 +129,6 @@ export const api = {
             })),
           })),
         })),
-        404: errorSchemas.notFound,
-      },
-    },
-  },
-  
-  // Mass-Scan Management API
-  massScan: {
-    uploadFile: {
-      method: "POST" as const,
-      path: "/api/mass-scan/upload",
-      input: z.object({
-        filename: z.string(),
-        content: z.string(), // Base64 or raw text content
-      }),
-      responses: {
-        201: z.object({
-          file: z.custom<typeof uploadedFiles.$inferSelect>(),
-          validUrls: z.number(),
-          invalidUrls: z.number(),
-          errors: z.array(z.string()),
-        }),
-        400: errorSchemas.validation,
-      },
-    },
-    getFiles: {
-      method: "GET" as const,
-      path: "/api/mass-scan/files",
-      responses: {
-        200: z.array(z.custom<typeof uploadedFiles.$inferSelect>()),
-      },
-    },
-    getFile: {
-      method: "GET" as const,
-      path: "/api/mass-scan/files/:id",
-      responses: {
-        200: z.object({
-          file: z.custom<typeof uploadedFiles.$inferSelect>(),
-          targets: z.array(z.custom<typeof stagedTargets.$inferSelect>()),
-          stageRuns: z.array(z.custom<typeof stageRuns.$inferSelect>()),
-        }),
-        404: errorSchemas.notFound,
-      },
-    },
-    deleteFile: {
-      method: "DELETE" as const,
-      path: "/api/mass-scan/files/:id",
-      responses: {
-        200: z.object({ success: z.boolean() }),
-        404: errorSchemas.notFound,
-      },
-    },
-    runStage: {
-      method: "POST" as const,
-      path: "/api/mass-scan/files/:id/run-stage",
-      input: z.object({
-        stageNumber: z.number().min(1).max(5),
-        threads: z.number().min(1).max(100).default(10),
-        targetIds: z.array(z.number()).optional(), // Specific targets, or all pending
-      }),
-      responses: {
-        201: z.custom<typeof stageRuns.$inferSelect>(),
-        400: errorSchemas.validation,
-        404: errorSchemas.notFound,
-      },
-    },
-    stopStage: {
-      method: "POST" as const,
-      path: "/api/mass-scan/runs/:runId/stop",
-      responses: {
-        200: z.custom<typeof stageRuns.$inferSelect>(),
-        404: errorSchemas.notFound,
-      },
-    },
-    getStageRuns: {
-      method: "GET" as const,
-      path: "/api/mass-scan/files/:id/runs",
-      responses: {
-        200: z.array(z.custom<typeof stageRuns.$inferSelect>()),
-        404: errorSchemas.notFound,
-      },
-    },
-    getFlaggedTargets: {
-      method: "GET" as const,
-      path: "/api/mass-scan/flagged-targets",
-      responses: {
-        200: z.array(z.custom<typeof stagedTargets.$inferSelect>()),
-      },
-    },
-    promoteTargets: {
-      method: "POST" as const,
-      path: "/api/mass-scan/files/:id/promote",
-      input: z.object({
-        targetIds: z.array(z.number()),
-        toStage: z.number().min(1).max(5),
-      }),
-      responses: {
-        200: z.object({ promoted: z.number() }),
-        400: errorSchemas.validation,
-        404: errorSchemas.notFound,
-      },
-    },
-    exportTargets: {
-      method: "GET" as const,
-      path: "/api/mass-scan/files/:id/export",
-      responses: {
-        200: z.any(), // Text file content
         404: errorSchemas.notFound,
       },
     },

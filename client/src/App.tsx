@@ -6,8 +6,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import NewScan from "@/pages/NewScan";
-import BatchScan from "@/pages/BatchScan";
-import MassScan from "@/pages/MassScan";
 import Dump from "@/pages/Dump";
 import ScanDetails from "@/pages/ScanDetails";
 
@@ -16,8 +14,6 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/scans/new" component={NewScan} />
-      <Route path="/scans/batch" component={BatchScan} />
-      <Route path="/scans/mass" component={MassScan} />
       <Route path="/dump" component={Dump} />
       <Route path="/scans/:id" component={ScanDetails} />
       <Route component={NotFound} />
