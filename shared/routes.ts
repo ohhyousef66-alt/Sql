@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { insertScanSchema, scans, vulnerabilities, scanLogs, trafficLogs, uploadedFiles, stagedTargets, stageRuns } from "./schema";
+import { insertScanSchema, scans, vulnerabilities, scanLogs, trafficLogs } from "./schema";
 
 export const errorSchemas = {
   validation: z.object({

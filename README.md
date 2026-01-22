@@ -1,30 +1,45 @@
-# SQL Injection Scanner
+# SQL Injection Scanner - Enterprise Grade
 
-Professional web vulnerability scanner focused on SQL injection detection with real-time monitoring and automated data extraction capabilities.
+Professional web vulnerability scanner with **484 payloads** matching SQLi Dumper's capabilities, plus enterprise features like web UI, real-time monitoring, and automated reporting.
 
 ## Tech Stack
 
 - **Backend:** Express.js + TypeScript
 - **Frontend:** React 18 + TypeScript + Shadcn/UI  
 - **Database:** PostgreSQL + Drizzle ORM
-- **Scanner:** Multi-threaded detection engine with adaptive testing
+- **Scanner:** Multi-threaded detection engine with 484 payloads
 
-## Core Features
+## Core Features - SQLi Dumper Level
 
-### Detection Capabilities
-- Error-based SQL injection
-- Boolean-based blind SQLi
-- Time-based blind SQLi
-- UNION-based SQLi
-- Second-order SQLi
-- WAF bypass strategies
+### Detection Capabilities (484 Payloads)
+- **Error-based SQLi:** 98 payloads with EXTRACTVALUE/UPDATEXML
+- **Boolean-based blind SQLi:** 55 payloads with binary search
+- **Time-based blind SQLi:** 50 payloads with SLEEP/WAITFOR
+- **UNION-based SQLi:** 88 payloads for direct extraction
+- **Stacked queries:** 31 payloads for command injection
+- **Second-order SQLi:** Advanced delayed injection
+- **WAF bypass:** 60 techniques (/*!*/, encoding, case variation)
+- **Out-of-band:** 15 DNS exfiltration payloads
+- **Advanced exploitation:** 22 file read/write payloads
+- **DBMS-specific:** 65 payloads (MySQL, PostgreSQL, MSSQL, Oracle)
 
-### UI & Reporting
-- Real-time scan progress tracking
-- Live traffic log inspection
-- Vulnerability severity classification
-- PDF report generation
-- Dark mode cybersecurity theme
+### Data Dumping (Matches SQLi Dumper)
+- Database enumeration (list all databases)
+- Table enumeration (list tables in database)
+- Column enumeration (extract column names/types)
+- Data extraction (dump table contents)
+- Multiple extraction techniques (error, UNION, blind)
+- File operations (LOAD_FILE, INTO OUTFILE)
+- Command execution (xp_cmdshell, pg_read_file)
+
+### Enterprise Features (Better than SQLi Dumper)
+- **Web UI:** Beautiful React dashboard (SQLi Dumper is CLI-only)
+- **Real-time monitoring:** Live scan progress with metrics
+- **Report generation:** Professional PDF + JSON + TXT reports
+- **Results persistence:** PostgreSQL storage (SQLi Dumper saves to files)
+- **API access:** RESTful API for automation
+- **Multi-user:** Authentication and scan history
+- **Dark mode:** Cybersecurity theme
 
 ## Installation
 
@@ -83,59 +98,12 @@ This tool is designed for security professionals and penetration testers. Only u
 ## License
 
 MIT
-- الاختبار الأمني المصرح به
-- بحوث Bug Bounty
-- البيئات التعليمية
 
-**لا تستخدم** هذه الأداة على أنظمة لا تملك إذن صريح لاختبارها.
-
-## 📖 التوثيق
-
-- [دليل البدء السريع](QUICK_START.md)
-- [دليل الاختبار](TESTING_GUIDE.md)
-- [حالات الاختبار](TEST_CASES.ts)
-- [حالة المشروع](PROJECT_STATUS.md)
-
-## 🏗️ البنية
-
-```
-├── client/          # React frontend
-│   └── src/        
-│       ├── pages/   # صفحات التطبيق
-│       └── components/  # مكونات UI
-├── server/          # Express backend
-│   ├── scanner/     # محرك الفحص
-│   └── routes.ts    # API endpoints
-├── scanner_cli/     # Python CLI scanner
-│   ├── scanner.py   # محرك الفحص الرئيسي
-│   ├── detector.py  # كاشف SQL injection
-│   └── reporter.py  # مولد التقارير
-├── shared/          # أنواع مشتركة
-└── migrations/      # Database migrations
-```
-
-## 🤝 المساهمة
-
-المساهمات مرحب بها! الرجاء:
-1. Fork المشروع
-2. إنشاء branch للميزة (`git checkout -b feature/AmazingFeature`)
-3. Commit التغييرات (`git commit -m 'Add AmazingFeature'`)
-4. Push إلى Branch (`git push origin feature/AmazingFeature`)
-5. فتح Pull Request
-
-## 📄 الترخيص
-
-هذا المشروع مرخص تحت MIT License.
-
-## 🔗 روابط مفيدة
+## Useful Links
 
 - [OWASP SQL Injection](https://owasp.org/www-community/attacks/SQL_Injection)
 - [PortSwigger SQL Injection](https://portswigger.net/web-security/sql-injection)
 
-## 📧 الدعم
-
-للمساعدة أو الإبلاغ عن المشاكل، يرجى فتح issue في GitHub.
-
 ---
 
-صُنع بـ ❤️ للمجتمع الأمني
+Made with ❤️ for the security community

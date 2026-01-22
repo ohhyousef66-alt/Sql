@@ -20,12 +20,7 @@ import {
   type InsertScanLog,
   type TrafficLog,
   type InsertTrafficLog,
-  type UploadedFile,
-  type InsertUploadedFile,
-  type StagedTarget,
-  type InsertStagedTarget,
-  type StageRun,
-  type InsertStageRun,
+
   type ExtractedDatabase,
   type InsertExtractedDatabase,
   type ExtractedTable,
@@ -73,27 +68,6 @@ export interface IStorage {
   createTrafficLog(log: InsertTrafficLog): Promise<TrafficLog>;
   
   cancelScan(id: number): Promise<Scan>;
-  
-  // Uploaded Files (Mass-Scan Management)
-  createUploadedFile(data: InsertUploadedFile): Promise<UploadedFile>;
-  getUploadedFile(id: number): Promise<UploadedFile | undefined>;
-  getUploadedFiles(): Promise<UploadedFile[]>;
-  updateUploadedFile(id: number, data: Partial<UploadedFile>): Promise<UploadedFile>;
-  deleteUploadedFile(id: number): Promise<void>;
-  
-  // Staged Targets (Mass-Scan Management)
-  createStagedTarget(data: InsertStagedTarget): Promise<StagedTarget>;
-  createStagedTargets(data: InsertStagedTarget[]): Promise<StagedTarget[]>;
-  getStagedTargetsByFile(fileId: number): Promise<StagedTarget[]>;
-  getStagedTargetsByFileAndStage(fileId: number, stage: number): Promise<StagedTarget[]>;
-  getFlaggedTargets(fileId?: number): Promise<StagedTarget[]>;
-  updateStagedTarget(id: number, data: Partial<StagedTarget>): Promise<StagedTarget>;
-  
-  // Stage Runs (Mass-Scan Management)
-  createStageRun(data: InsertStageRun): Promise<StageRun>;
-  getStageRun(id: number): Promise<StageRun | undefined>;
-  getStageRunsByFile(fileId: number): Promise<StageRun[]>;
-  updateStageRun(id: number, data: Partial<StageRun>): Promise<StageRun>;
   
   // Data Dumping (SQLi Dumper Feature)
   getVulnerability(id: number): Promise<Vulnerability | undefined>;
@@ -329,69 +303,6 @@ export class DatabaseStorage implements IStorage {
     await db.delete(scanLogs).where(eq(scanLogs.scanId, id));
     await db.delete(trafficLogs).where(eq(trafficLogs.scanId, id));
     await db.delete(scans).where(eq(scans.id, id));
-  }
-
-  // Uploaded Files (Mass-Scan Management) - DISABLED (not in schema)
-  async createUploadedFile(data: any): Promise<any> {
-    throw new Error("Uploaded files feature not available");
-  }
-
-  async getUploadedFile(id: number): Promise<any> {
-    return undefined;
-  }
-
-  async getUploadedFiles(): Promise<any[]> {
-    return [];
-  }
-
-  async updateUploadedFile(id: number, data: any): Promise<any> {
-    throw new Error("Uploaded files feature not available");
-  }
-
-  async deleteUploadedFile(id: number): Promise<void> {
-    // Feature disabled
-  }
-
-  // Staged Targets (Mass-Scan Management) - DISABLED (not in schema)
-  async createStagedTarget(data: any): Promise<any> {
-    throw new Error("Staged targets feature not available");
-  }
-
-  async createStagedTargets(data: any[]): Promise<any[]> {
-    throw new Error("Staged targets feature not available");
-  }
-
-  async getStagedTargetsByFile(fileId: number): Promise<any[]> {
-    return [];
-  }
-
-  async getStagedTargetsByFileAndStage(fileId: number, stage: number): Promise<any[]> {
-    return [];
-  }
-
-  async getFlaggedTargets(fileId?: number): Promise<any[]> {
-    return [];
-  }
-
-  async updateStagedTarget(id: number, data: any): Promise<any> {
-    throw new Error("Staged targets feature not available");
-  }
-
-  // Stage Runs (Mass-Scan Management) - DISABLED (not in schema)
-  async createStageRun(data: any): Promise<any> {
-    throw new Error("Stage runs feature not available");
-  }
-
-  async getStageRun(id: number): Promise<any> {
-    return undefined;
-  }
-
-  async getStageRunsByFile(fileId: number): Promise<any[]> {
-    return [];
-  }
-
-  async updateStageRun(id: number, data: any): Promise<any> {
-    throw new Error("Stage runs feature not available");
   }
 
   async cleanupOrphanedScans(): Promise<number> {
