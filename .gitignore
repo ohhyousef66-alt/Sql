@@ -41,6 +41,11 @@ yarn-error.log*
 # Test results
 coverage/
 .nyc_output/
+scanner_cli/*.json
+scanner_cli/*.txt
+scanner_cli/results*.json
+scanner_cli/test*.json
+scanner_cli/scan_results.*
 
 # Temporary files
 *.tmp
@@ -48,6 +53,22 @@ temp/
 tmp/
 vite.config.ts.*
 *.tar.gz
+cleanup.sh
+deep-clean.sh
+final-cleanup.sh
+*-clean.sh
+
+# Documentation bloat (keep only README.md)
+*_SUMMARY.md
+*_GUIDE.md
+*_REPORT.md
+*_LOG.md
+*_COMPLETE.md
+*_FIXES.md
+PROOF_*.md
+VERIFICATION_*.md
+INTEGRATION_*.md
+TODO_*.md
 
 # Scanner results (keep examples but not actual scans)
 scanner_cli/results_*.json

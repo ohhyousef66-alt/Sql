@@ -1,103 +1,88 @@
-# 🛡️ SecScan.io - SQL Injection Detection Scanner
+# SQL Injection Scanner
 
-أداة احترافية لفحص واكتشاف ثغرات حقن SQL مع واجهة ويب حديثة ومحرك فحص متعدد الخيوط.
+Professional web vulnerability scanner focused on SQL injection detection with real-time monitoring and automated data extraction capabilities.
 
-## 🚀 المميزات
+## Tech Stack
 
-### محرك الفحص
-- ✅ اكتشاف حقن SQL القائم على Boolean
-- ✅ اكتشاف حقن SQL القائم على الأخطاء (Error-based)
-- ✅ اكتشاف حقن SQL الأعمى القائم على الوقت (Time-based blind)
-- ✅ اكتشاف حقن SQL القائم على UNION
-- ✅ اكتشاف حقن SQL من الدرجة الثانية
-- ✅ استراتيجيات تجاوز WAF
-- ✅ معالجة قيود المعدل
-- ✅ حماية من انتهاء المهلة (60 ثانية لكل URL)
+- **Backend:** Express.js + TypeScript
+- **Frontend:** React 18 + TypeScript + Shadcn/UI  
+- **Database:** PostgreSQL + Drizzle ORM
+- **Scanner:** Multi-threaded detection engine with adaptive testing
 
-### لوحة التحكم
-- ✅ React 18 + TypeScript
-- ✅ تتبع تقدم الفحص في الوقت الفعلي
-- ✅ تصور بيانات الهجوم المباشر
-- ✅ عرض تفاصيل الثغرات
-- ✅ فحص سجلات المرور
-- ✅ توليد تقارير PDF
-- ✅ تصميم سيبراني داكن (Shadcn/UI)
+## Core Features
 
-### الواجهة الخلفية
-- ✅ Express.js REST API
-- ✅ PostgreSQL + Drizzle ORM
-- ✅ عمليات قاعدة بيانات آمنة من النوع
-- ✅ إدارة قائمة انتظار الطلبات غير المتزامنة
-- ✅ تجميع الاتصالات (200 مقبس كحد أقصى)
+### Detection Capabilities
+- Error-based SQL injection
+- Boolean-based blind SQLi
+- Time-based blind SQLi
+- UNION-based SQLi
+- Second-order SQLi
+- WAF bypass strategies
 
-## 📋 المتطلبات
+### UI & Reporting
+- Real-time scan progress tracking
+- Live traffic log inspection
+- Vulnerability severity classification
+- PDF report generation
+- Dark mode cybersecurity theme
 
-- Node.js 20+
-- Python 3.11+
-- PostgreSQL 15+
-- Docker (اختياري)
-
-## 🔧 التثبيت والتشغيل
-
-### 1️⃣ التثبيت السريع
+## Installation
 
 ```bash
-# استنساخ المشروع
-git clone <repository-url>
-cd Sql
-
-# تثبيت التبعيات
+# Install dependencies
 npm install
 
-# إعداد قاعدة البيانات
+# Configure environment
 cp .env.example .env
-# قم بتحرير .env وإضافة DATABASE_URL
+# Edit .env with your DATABASE_URL
 
-# تشغيل migrations
+# Setup database
 npm run db:push
 
-# تشغيل المشروع
+# Start server
 npm run dev
 ```
 
-### 2️⃣ استخدام Docker
+Server runs on http://localhost:5000
 
-```bash
-# تشغيل كل شيء مع Docker Compose
-docker-compose up -d
+## Project Structure
 
-# الوصول إلى التطبيق على http://localhost:3000
+```
+server/
+  ├── scanner/           # Detection engine
+  │   ├── modules/       # SQLi, XSS, etc.
+  │   ├── pipeline/      # Staged scanning pipeline
+  │   └── utils/         # Helper functions
+  ├── routes.ts          # API endpoints
+  └── storage.ts         # Database layer
+client/
+  ├── src/
+  │   ├── pages/         # React pages
+  │   └── components/    # UI components
+shared/
+  └── schema.ts          # Shared types
+scanner_cli/             # Python CLI tool
 ```
 
-### 3️⃣ استخدام Scanner CLI
+## Available Commands
 
 ```bash
-cd scanner_cli
-
-# فحص بسيط
-python main.py --url "http://example.com/page.php?id=1"
-
-# فحص متقدم مع خيارات
-python main.py --url "http://example.com/page.php?id=1" \
-  --threads 20 \
-  --types error_based,boolean_based \
-  --output results \
-  --verbose
+npm run dev        # Development server
+npm run build      # Production build
+npm run start      # Production server
+npm run check      # TypeScript validation
+npm run db:push    # Database migrations
 ```
 
-## 📚 الأوامر المتاحة
+## Security Warning
 
-```bash
-npm run dev        # تشغيل في وضع التطوير
-npm run build      # بناء للإنتاج
-npm run start      # تشغيل الإنتاج
-npm run check      # فحص أخطاء TypeScript
-npm run db:push    # تطبيق schema على قاعدة البيانات
-```
+⚠️ **Authorized Testing Only**
 
-## 🔒 الأمان
+This tool is designed for security professionals and penetration testers. Only use against systems you have explicit written permission to test. Unauthorized scanning is illegal.
 
-⚠️ **تحذير**: هذه الأداة مخصصة **فقط** لأغراض:
+## License
+
+MIT
 - الاختبار الأمني المصرح به
 - بحوث Bug Bounty
 - البيئات التعليمية
