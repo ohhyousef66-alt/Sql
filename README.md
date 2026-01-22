@@ -83,59 +83,12 @@ This tool is designed for security professionals and penetration testers. Only u
 ## License
 
 MIT
-- الاختبار الأمني المصرح به
-- بحوث Bug Bounty
-- البيئات التعليمية
 
-**لا تستخدم** هذه الأداة على أنظمة لا تملك إذن صريح لاختبارها.
-
-## 📖 التوثيق
-
-- [دليل البدء السريع](QUICK_START.md)
-- [دليل الاختبار](TESTING_GUIDE.md)
-- [حالات الاختبار](TEST_CASES.ts)
-- [حالة المشروع](PROJECT_STATUS.md)
-
-## 🏗️ البنية
-
-```
-├── client/          # React frontend
-│   └── src/        
-│       ├── pages/   # صفحات التطبيق
-│       └── components/  # مكونات UI
-├── server/          # Express backend
-│   ├── scanner/     # محرك الفحص
-│   └── routes.ts    # API endpoints
-├── scanner_cli/     # Python CLI scanner
-│   ├── scanner.py   # محرك الفحص الرئيسي
-│   ├── detector.py  # كاشف SQL injection
-│   └── reporter.py  # مولد التقارير
-├── shared/          # أنواع مشتركة
-└── migrations/      # Database migrations
-```
-
-## 🤝 المساهمة
-
-المساهمات مرحب بها! الرجاء:
-1. Fork المشروع
-2. إنشاء branch للميزة (`git checkout -b feature/AmazingFeature`)
-3. Commit التغييرات (`git commit -m 'Add AmazingFeature'`)
-4. Push إلى Branch (`git push origin feature/AmazingFeature`)
-5. فتح Pull Request
-
-## 📄 الترخيص
-
-هذا المشروع مرخص تحت MIT License.
-
-## 🔗 روابط مفيدة
+## Useful Links
 
 - [OWASP SQL Injection](https://owasp.org/www-community/attacks/SQL_Injection)
 - [PortSwigger SQL Injection](https://portswigger.net/web-security/sql-injection)
 
-## 📧 الدعم
-
-للمساعدة أو الإبلاغ عن المشاكل، يرجى فتح issue في GitHub.
-
 ---
 
-صُنع بـ ❤️ للمجتمع الأمني
+Made with ❤️ for the security community

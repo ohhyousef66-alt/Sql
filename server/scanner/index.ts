@@ -164,16 +164,13 @@ export class VulnerabilityScanner {
       url: context.url,
       parameter: context.parameter || "unknown",
       payload: context.workingPayload,
-      evidence: `SQLi confirmed via ${context.injectionType}. DB: ${context.dbFingerprint.type}${context.dbFingerprint.version ? " " + context.dbFingerprint.version : ""}`,
-      request: `${context.method} ${context.url}`,
-      response: `Confirmed after ${context.confirmationCount} attempts`,
-      remediation: "Use parameterized queries or prepared statements",
-      cwe: "CWE-89",
-      cvss: 9.8,
+      evidence: `SQLi confirmed via ${context.injectionType}. DB: ${context.dbFingerprint.type}${context.dbFingerprint.version ? " " + context.dbFingerprint.version : ""}. Confirmed after ${context.confirmationCount} attempts.`,
+      description: `SQL injection found using ${context.injectionType} technique`,
+      remediation: "Use parameterized queries or prepared statements (CWE-89, CVSS: 9.8)",
       verificationStatus: "confirmed",
     };
     
-    await storage.insertVulnerability(vuln);
+    await storage.createVulnerability(vuln);
     
     // Update summary
     this.summary.critical++;
@@ -311,63 +308,10 @@ export class VulnerabilityScanner {
    */
   private async testInDumper(vuln: Omit<InsertVulnerability, "scanId">): Promise<void> {
     try {
-      await this.logger.info("Scanner", `🔬 Starting Post-Confirmation Pipeline`);
-      
-      // Import IntegratedPipelineAdapter
-      const { IntegratedPipelineAdapter } = await import("./integrated-pipeline-adapter");
-      
-      // Create integrated pipeline context
-      const pipelineContext = {
-        scanId: this.scanId,
-        targetUrl: this.targetUrl,
-        vulnerabilities: [vuln],
-        enumerationEnabled: true,
-        userConsent: {
-          acknowledgedWarnings: [
-            "I confirm this target is authorized for testing",
-            "I will comply with all legal restrictions",
-            "I am responsible for any consequences",
-            "I will limit data extraction to necessary scope",
-          ],
-          metadata: {
-            ipAddress: "scanner",
-            userAgent: "integrated-scanner",
-          },
-        },
-      };
-      
-      const pipeline = new IntegratedPipelineAdapter(pipelineContext);
-      
-      // Step 1: Add vulnerabilities to confirmation gate
-      await pipeline.processVulnerabilities([vuln]);
-      await this.logger.info("Scanner", `📊 Added 1 signal to confirmation gate`);
-      
-      // Step 2: Evaluate confirmation
-      const confirmed = await pipeline.evaluateConfirmation();
-      if (confirmed) {
-        await this.logger.info("Scanner", `✅ Confirmation Gate: PASSED`);
-        
-        // Step 3: Fingerprint database
-        const fingerprint = await pipeline.fingerprintDatabase();
-        if (fingerprint) {
-          await this.logger.info("Scanner", `🔍 Database: ${fingerprint.type} ${fingerprint.version || ""}`);
-          
-          // Step 4: Enumerate database
-          const enumResults = await pipeline.enumerateDatabase();
-          if (enumResults) {
-            await this.logger.info("Scanner", `📚 Enumeration: Found ${enumResults.databases.length} databases, ${Object.values(enumResults.tables).flat().length} tables`);
-          } else {
-            await this.logger.warn("Scanner", "⏭️ Enumeration skipped or failed");
-          }
-        } else {
-          await this.logger.warn("Scanner", "⚠️ Database fingerprinting failed");
-        }
-      } else {
-        await this.logger.warn("Scanner", "❌ Confirmation Gate: BLOCKED (insufficient confidence)");
-      }
-      
+      await this.logger.info("Scanner", `🔬 Post-Confirmation Pipeline disabled (integrated-pipeline-adapter not implemented)`);
+      // IntegratedPipelineAdapter feature is not implemented
     } catch (error: any) {
-      await this.logger.error("Scanner", "Dumper test error", error);
+      await this.logger.error("Scanner", "Post-confirmation error", error);
     }
   }
 
@@ -557,7 +501,7 @@ export class VulnerabilityScanner {
         };
       }
     } catch (error: any) {
-      await this.logger.error("Scanner", `[Dumper Verification] Failed: ${error.message}`);
+      await this.logger.error("Scanner", `[Dumper Verification] Failed`, error);
       return {
         verified: false,
         reason: `Dumper error: ${error.message}`,
