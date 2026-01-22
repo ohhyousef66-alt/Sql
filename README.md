@@ -1,30 +1,45 @@
-# SQL Injection Scanner
+# SQL Injection Scanner - Enterprise Grade
 
-Professional web vulnerability scanner focused on SQL injection detection with real-time monitoring and automated data extraction capabilities.
+Professional web vulnerability scanner with **484 payloads** matching SQLi Dumper's capabilities, plus enterprise features like web UI, real-time monitoring, and automated reporting.
 
 ## Tech Stack
 
 - **Backend:** Express.js + TypeScript
 - **Frontend:** React 18 + TypeScript + Shadcn/UI  
 - **Database:** PostgreSQL + Drizzle ORM
-- **Scanner:** Multi-threaded detection engine with adaptive testing
+- **Scanner:** Multi-threaded detection engine with 484 payloads
 
-## Core Features
+## Core Features - SQLi Dumper Level
 
-### Detection Capabilities
-- Error-based SQL injection
-- Boolean-based blind SQLi
-- Time-based blind SQLi
-- UNION-based SQLi
-- Second-order SQLi
-- WAF bypass strategies
+### Detection Capabilities (484 Payloads)
+- **Error-based SQLi:** 98 payloads with EXTRACTVALUE/UPDATEXML
+- **Boolean-based blind SQLi:** 55 payloads with binary search
+- **Time-based blind SQLi:** 50 payloads with SLEEP/WAITFOR
+- **UNION-based SQLi:** 88 payloads for direct extraction
+- **Stacked queries:** 31 payloads for command injection
+- **Second-order SQLi:** Advanced delayed injection
+- **WAF bypass:** 60 techniques (/*!*/, encoding, case variation)
+- **Out-of-band:** 15 DNS exfiltration payloads
+- **Advanced exploitation:** 22 file read/write payloads
+- **DBMS-specific:** 65 payloads (MySQL, PostgreSQL, MSSQL, Oracle)
 
-### UI & Reporting
-- Real-time scan progress tracking
-- Live traffic log inspection
-- Vulnerability severity classification
-- PDF report generation
-- Dark mode cybersecurity theme
+### Data Dumping (Matches SQLi Dumper)
+- Database enumeration (list all databases)
+- Table enumeration (list tables in database)
+- Column enumeration (extract column names/types)
+- Data extraction (dump table contents)
+- Multiple extraction techniques (error, UNION, blind)
+- File operations (LOAD_FILE, INTO OUTFILE)
+- Command execution (xp_cmdshell, pg_read_file)
+
+### Enterprise Features (Better than SQLi Dumper)
+- **Web UI:** Beautiful React dashboard (SQLi Dumper is CLI-only)
+- **Real-time monitoring:** Live scan progress with metrics
+- **Report generation:** Professional PDF + JSON + TXT reports
+- **Results persistence:** PostgreSQL storage (SQLi Dumper saves to files)
+- **API access:** RESTful API for automation
+- **Multi-user:** Authentication and scan history
+- **Dark mode:** Cybersecurity theme
 
 ## Installation
 
