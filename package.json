@@ -10,7 +10,8 @@
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "lint": "tsc --noEmit",
-    "test": "echo \"No tests configured yet\" && exit 0"
+    "test": "echo \"No tests configured yet\" && exit 0",
+    "proof": "tsx proof-test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

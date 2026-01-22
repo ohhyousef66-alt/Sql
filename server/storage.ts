@@ -4,9 +4,9 @@ import {
   vulnerabilities,
   scanLogs,
   trafficLogs,
-  uploadedFiles,
-  stagedTargets,
-  stageRuns,
+  // uploadedFiles,  // Not in schema
+  // stagedTargets,  // Not in schema
+  // stageRuns,      // Not in schema
   extractedDatabases,
   extractedTables,
   extractedColumns,
@@ -331,115 +331,67 @@ export class DatabaseStorage implements IStorage {
     await db.delete(scans).where(eq(scans.id, id));
   }
 
-  // Uploaded Files (Mass-Scan Management)
-  async createUploadedFile(data: InsertUploadedFile): Promise<UploadedFile> {
-    const [file] = await db.insert(uploadedFiles).values(data).returning();
-    return file;
+  // Uploaded Files (Mass-Scan Management) - DISABLED (not in schema)
+  async createUploadedFile(data: any): Promise<any> {
+    throw new Error("Uploaded files feature not available");
   }
 
-  async getUploadedFile(id: number): Promise<UploadedFile | undefined> {
-    const [file] = await db.select().from(uploadedFiles).where(eq(uploadedFiles.id, id));
-    return file;
+  async getUploadedFile(id: number): Promise<any> {
+    return undefined;
   }
 
-  async getUploadedFiles(): Promise<UploadedFile[]> {
-    return await db.select().from(uploadedFiles).orderBy(desc(uploadedFiles.uploadedAt));
+  async getUploadedFiles(): Promise<any[]> {
+    return [];
   }
 
-  async updateUploadedFile(id: number, data: Partial<UploadedFile>): Promise<UploadedFile> {
-    const [updated] = await db
-      .update(uploadedFiles)
-      .set(data)
-      .where(eq(uploadedFiles.id, id))
-      .returning();
-    return updated;
+  async updateUploadedFile(id: number, data: any): Promise<any> {
+    throw new Error("Uploaded files feature not available");
   }
 
   async deleteUploadedFile(id: number): Promise<void> {
-    await db.delete(stagedTargets).where(eq(stagedTargets.fileId, id));
-    await db.delete(stageRuns).where(eq(stageRuns.fileId, id));
-    await db.delete(uploadedFiles).where(eq(uploadedFiles.id, id));
+    // Feature disabled
   }
 
-  // Staged Targets (Mass-Scan Management)
-  async createStagedTarget(data: InsertStagedTarget): Promise<StagedTarget> {
-    const [target] = await db.insert(stagedTargets).values(data as any).returning();
-    return target;
+  // Staged Targets (Mass-Scan Management) - DISABLED (not in schema)
+  async createStagedTarget(data: any): Promise<any> {
+    throw new Error("Staged targets feature not available");
   }
 
-  async createStagedTargets(data: InsertStagedTarget[]): Promise<StagedTarget[]> {
-    if (data.length === 0) return [];
-    const targets = await db.insert(stagedTargets).values(data as any).returning();
-    return targets;
+  async createStagedTargets(data: any[]): Promise<any[]> {
+    throw new Error("Staged targets feature not available");
   }
 
-  async getStagedTargetsByFile(fileId: number): Promise<StagedTarget[]> {
-    return await db
-      .select()
-      .from(stagedTargets)
-      .where(eq(stagedTargets.fileId, fileId))
-      .orderBy(stagedTargets.id);
+  async getStagedTargetsByFile(fileId: number): Promise<any[]> {
+    return [];
   }
 
-  async getStagedTargetsByFileAndStage(fileId: number, stage: number): Promise<StagedTarget[]> {
-    return await db
-      .select()
-      .from(stagedTargets)
-      .where(and(eq(stagedTargets.fileId, fileId), eq(stagedTargets.currentStage, stage)))
-      .orderBy(stagedTargets.id);
+  async getStagedTargetsByFileAndStage(fileId: number, stage: number): Promise<any[]> {
+    return [];
   }
 
-  async getFlaggedTargets(fileId?: number): Promise<StagedTarget[]> {
-    if (fileId !== undefined) {
-      return await db
-        .select()
-        .from(stagedTargets)
-        .where(and(eq(stagedTargets.fileId, fileId), eq(stagedTargets.isAnomaly, true)))
-        .orderBy(stagedTargets.id);
-    }
-    return await db
-      .select()
-      .from(stagedTargets)
-      .where(eq(stagedTargets.isAnomaly, true))
-      .orderBy(stagedTargets.id);
+  async getFlaggedTargets(fileId?: number): Promise<any[]> {
+    return [];
   }
 
-  async updateStagedTarget(id: number, data: Partial<StagedTarget>): Promise<StagedTarget> {
-    const updateData = { ...data, updatedAt: new Date() } as any;
-    const [updated] = await db
-      .update(stagedTargets)
-      .set(updateData)
-      .where(eq(stagedTargets.id, id))
-      .returning();
-    return updated;
+  async updateStagedTarget(id: number, data: any): Promise<any> {
+    throw new Error("Staged targets feature not available");
   }
 
-  // Stage Runs (Mass-Scan Management)
-  async createStageRun(data: InsertStageRun): Promise<StageRun> {
-    const [run] = await db.insert(stageRuns).values(data).returning();
-    return run;
+  // Stage Runs (Mass-Scan Management) - DISABLED (not in schema)
+  async createStageRun(data: any): Promise<any> {
+    throw new Error("Stage runs feature not available");
   }
 
-  async getStageRun(id: number): Promise<StageRun | undefined> {
-    const [run] = await db.select().from(stageRuns).where(eq(stageRuns.id, id));
-    return run;
+  async getStageRun(id: number): Promise<any> {
+    return undefined;
   }
 
-  async getStageRunsByFile(fileId: number): Promise<StageRun[]> {
-    return await db
-      .select()
-      .from(stageRuns)
-      .where(eq(stageRuns.fileId, fileId))
-      .orderBy(stageRuns.stageNumber);
+  async getStageRunsByFile(fileId: number): Promise<any[]> {
+    return [];
   }
 
-  async updateStageRun(id: number, data: Partial<StageRun>): Promise<StageRun> {
-    const [updated] = await db
-      .update(stageRuns)
-      .set(data)
-      .where(eq(stageRuns.id, id))
-      .returning();
-    return updated;
+  async updateStageRun(id: number, data: any): Promise<any> {
+    throw new Error("Stage runs feature not available");
   }
 
   async cleanupOrphanedScans(): Promise<number> {
